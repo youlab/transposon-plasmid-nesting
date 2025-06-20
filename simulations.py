@@ -93,18 +93,14 @@ def __(mo):
 
 @app.cell
 def __():
-    # ATB_CONCS = [0, 0.5, 1, 2, 3, 4]
-    ATB_CONCS = [0, 0.5, 1, 2]
-    # MIC = 1
+    ATB_CONCS = [0, 0.5, 1, 2, 3]
     return ATB_CONCS,
 
 
 @app.cell
 def __(np):
-    def calculate_growth_rate_matrix(antibiotic_concs, transposon_copies, baseline_mu, transposon_linear_decrease_rate = 0.004, MIC_increase_factor = 0.02):
-        ### Use 0.005 for Fig. 5
-        ### 0.004/0.005 & 0.05/4 for Fig. 1; 0.005 & 0.04
-        ### MIC_increase_factor = 0.08/>=0.06 for nonmonotonic increase; 0.003 & 0.05;0.08;0.2 for Fig.5
+    def calculate_growth_rate_matrix(antibiotic_concs, transposon_copies, baseline_mu, transposon_linear_decrease_rate = 0.003, MIC_increase_factor = 0.03):
+        ### Use 0.003 & 0.03 for main figures; 0.005 & 0.05/0.08 for supplementary fig.10
         """
         Calculate a matrix of growth rates based on antibiotic concentrations and transposon copy numbers.
 
@@ -127,27 +123,19 @@ def __(np):
 
         # Create meshgrid for vectorized calculation
         antibiotic_mesh, transposon_mesh = np.meshgrid(antibiotic_concs, transposon_copies)
-        # print('antibiotic mesh: ', antibiotic_mesh)
-        # print('transposon mesh: ', transposon_mesh)
 
         # If transposon is resistant, more transposon means higher MIC, less effective drug effect, linear increase from the baseline MIC
         transposon_MIC_mesh = MIC+(MIC_increase_factor*transposon_mesh)
-        # print('transposon_MIC_mesh', transposon_MIC_mesh)
-        # 
         resistance_effect = transposon_MIC_mesh**hill_coeff / (antibiotic_mesh**hill_coeff + transposon_MIC_mesh**hill_coeff)
-        # print('resistance_effect: ', resistance_effect)
 
         # Calculate linear decrease effect (less pronounced)
         transposon_linear_decrease = 1 - transposon_linear_decrease_rate * transposon_mesh
-    #     print(transposon_linear_decrease)
 
         # Calculate final growth rate matrix
         growth_rate_matrix = base_growth_rate * resistance_effect * transposon_linear_decrease
-        # print(growth_rate_matrix)
 
         # Set the cells without any transposon and with no selection back to baseline growth rate
         growth_rate_matrix[0,0] = base_growth_rate
-    #     print(growth_rate_matrix)
 
         return growth_rate_matrix
     return calculate_growth_rate_matrix,
@@ -173,7 +161,6 @@ def __(ATB_CONCS, calculate_growth_rate_matrix, np):
     ### plasmidNum: the number of plasmids;
     ###          If there are n plasmids, then there are n+1 maximum possible subpopulations,
     ###          each subpopulation has a different number of transposons on plasmids, from 0 to n
-    ### baselineMu
 
     ### It returns growth rates for all subpopulations under two conditions
     ### i.e., selection or no selection; selection A or selection B
@@ -198,12 +185,8 @@ def __():
 def __(growthRateFluctuating, np):
     ### Testing here
     popSizeList = np.arange(10, 101, 5)
-    # muBaselineList = [random.uniform(2, 1) for _ in range(len(popSizeList))]
     muBaselineList = 1*np.ones(len(popSizeList))
-    # muBaselineList =  np.linspace(1.2, 1, num=len(popSizeList))
 
-    # 10 subpopulation, with muMax = 1.5, muMin = 0.5
-    # e.g. A transposon system with PCN = 10
     plasmidN01, muBaseline01 = popSizeList[0], muBaselineList[0]
     plasmidN02, muBaseline02 = popSizeList[9], muBaselineList[9]
     plasmidN03, muBaseline03 = popSizeList[-1], muBaselineList[-1]
@@ -212,9 +195,6 @@ def __(growthRateFluctuating, np):
     growthRateMatrix_test01 = growthRateFluctuating(plasmidN01, muBaseline01)
     growthRateMatrix_test02 = growthRateFluctuating(plasmidN02, muBaseline02)
     growthRateMatrix_test03 = growthRateFluctuating(plasmidN03, muBaseline03)
-
-    # growthRateMatrix_test = [growthRateMatrix_test03, growthRateMatrix_test02, growthRateMatrix_test01]
-    # plasmidList = [plasmidN03, plasmidN02, plasmidN01]
 
     growthRateMatrix_test = [growthRateMatrix_test03]
     plasmidList = [plasmidN03]
@@ -233,12 +213,6 @@ def __(growthRateFluctuating, np):
         plasmidN03,
         popSizeList,
     )
-
-
-@app.cell
-def __(plasmidN03):
-    plasmidN03
-    return
 
 
 @app.cell
@@ -270,6 +244,7 @@ def __(growthRateMatrix_test, np, plasmidList, plt):
         # Remove tick lines while keeping labels
         plt.tick_params(axis='both', which='both', length=0)
     plt.show()
+    # fig.savefig("Fig2DLeft.pdf", bbox_inches="tight")
 
     ### Figure for both growth curves with the curves of mu_noS dimmed
     fig = plt.figure(figsize=(2,2))
@@ -314,19 +289,16 @@ def __(growthRateMatrix_test, np, plasmidList, plt):
         # plt.xlabel('TCN', fontsize=40)
     # plt.legend()
     plt.show()
+
+    # fig.savefig("Fig2DRight.pdf", bbox_inches="tight")
     return LineLabel, PCN, c, cmap, color, color1, fig, g, growthRateMatrix
-
-
-@app.cell
-def __():
-    return
 
 
 @app.cell
 def __(np):
     ### A function to calculate the transition matrix between neighboring subpopulations
 
-    ### It takes 4 inputs, with last one being optional:
+    ### It takes 5 inputs, with last 2 being optional:
     ### plasmidNum: the number of plasmids;
     ###          If there are n plasmids, then there are n+1 maximum possible subpopulations,
     ###          each subpopulation has a different number of transposons on plasmids, from 0 to n
@@ -334,19 +306,11 @@ def __(np):
     ### excisionEffect: a percentage of transitionR
     ###                 transitionR * excisionEffect is the transition rate from subpopulation n to n-1
     ###                 it's zero for incompatible plasmids
-    ### chromosomeToPlasmidEffect: a percentage of transitionR
-    ###                 transitionR * chromosomeToPlasmidEffect is the transition rate from subpopulation 0 to 1
-    ###                 it's zero for incompatible plasmids
 
     ### It returns the transition matrix
 
     def calculateTransitionMatrix(plasmidNum, transitionR, excisionEffect, jumping = 1, plasmidAmp = 1):
-        # # Jumping rate from chromosome to plasmid might be different from excision rate
-        # # But since they are both very small, without specification, we can consider them the same,
-        # # without affecting the end result
-        # if chromosomeToPlasmidEffect==-1:
-        #     chromosomeToPlasmidEffect = excisionEffect
-
+        # For PCN dynamics effect
         ampFactor = 2
 
         if jumping != 1:
@@ -356,8 +320,8 @@ def __(np):
             transitionRReverse = transitionR
             upValueList = transitionRReverse*np.ones(plasmidNum)
         else:
-            # transposition increase the forward rate by 0.05; could adjust
-            transitionRForward = transitionR+0.1
+            # transposition increase the forward rate by 0.05; could adjust: 0.1 & 0.03 are presented in SF2
+            transitionRForward = transitionR+0.05
             constant = 0.0;
             jumpingAsAFunctionOfTPN = np.array([constant * i for i in range(plasmidNum)])
 
@@ -381,7 +345,6 @@ def __(np):
         UpBottomSum = upValueList + bottomValueList
         UpBottomSum[UpBottomSum>1] = 1
         bottomValueList[bottomValueList>(1-upValueList[2])] = 1-upValueList[2]
-
 
         # Upper part of the triD matrix, i.e., A to A-1
         # upValueList = transitionRReverse*np.ones(plasmidNum)
@@ -410,9 +373,6 @@ def __(np):
 
         finalMatrix[0, 0] = 0-finalMatrix[1, 0]
 
-        # finalMatrix[0, 1] = excisionEffect*finalMatrix[0, 1]
-        # finalMatrix[1, 1] = 0-finalMatrix[0, 1]-finalMatrix[2, 1]
-
         # Special consideration for the n -> n-1 (should be very rare)
         finalMatrix[-2, -1] = excisionEffect*finalMatrix[-2, -1]
         finalMatrix[-1, -1] = 0-finalMatrix[-2, -1]
@@ -425,7 +385,7 @@ def __(np):
 def __():
     ### Testing here
 
-    # 5 plasmids, 6 subpopulations, with transition rate = 0.1, and excision effect = 0.01
+    # 100 plasmids, 101 subpopulations, with transition rate = 0.1, and excision effect = 0.01
     plasmidN = 100
     transR = 0.1
     excisionE = 0.0
@@ -493,28 +453,6 @@ def __():
 
 
 @app.cell
-def __():
-    def triDLogisticGrowthVaryD(time, state, triDMatrix, growthRMatrix):
-        # Calculate growth rates (without logistic constraint)
-        expList = triDMatrix@state  
-
-        # Calculate average growth rate as the dilution rate
-
-        ### Why unbound?
-        ### Need to use the whole matrix
-        # d(t) = Σᵢ μᵢ(t)Tᵢ(t)
-        instantenousGrowthRateList = growthRMatrix@state # This represents μᵢ in the equation
-        average_growth_rate = sum(instantenousGrowthRateList)
-        # average_growth_rate = sum(instantenousGrowthRateList * state)/sum(state)
-
-        # Use variable dilution rate
-        result = expList - average_growth_rate*state
-
-        return result
-    return triDLogisticGrowthVaryD,
-
-
-@app.cell
 def __(
     calculateTransitionMatrix,
     excisionE,
@@ -524,15 +462,14 @@ def __(
     triDLogisticGrowth,
 ):
     ### Testing here
-
     # Dilution rate
     dilutionR = 0.1
 
-    # Initialize the y0 for 6 populations, each of density = 0.1
+    # Initialize the y0, each of density = 0.1
     y0 = 0.1*np.ones(plasmidN+1)
 
     # A simple triD matrix
-    # 6 subpopulations, with transition rate = 0.1, and excision effect = 0.01
+    # 101 subpopulations, with transition rate = 0.1, and excision effect = 0.01
     A = calculateTransitionMatrix(plasmidN, transR, excisionE)
 
     # Call function, t value does not matter here, as it is only used by the ODE solver later
@@ -548,17 +485,6 @@ def __(np, pd):
     ### timecourse: the simulated time course from the function sameGrowthEffectSimOnce
     ### currentGrowthRate: the list of growth rates for all subpopulations under the current atb selection
     ###                    this is from the function growthRateMatrix
-
-    ### It returns 8 outputs.
-    ### meanCopyList: a list of the mean transposon copy over the whole time course
-    ### meanMuList: a list of the mean growth rate over the whole time course
-    ### meanCopyList_P: a list of the mean transposon copy over the whole time course, normalized by OD
-    ### meanMuList_P: a list of the mean growth rate over the whole time course, normalized by OD
-    ### VarList: a list of the variance of transposon copy over the whole time course
-    ### CovList: a list of the covariance of transposon copy and growth rate over the whole time course
-    ###          this is the list we care about.
-    ### NormalizedCovList: normalized version of the above list
-    ### sumODList: sum of OD at each time point for sanity check
 
     def priceResults(timecourse, currentGrowthRate, plasmidConstraint=-1):
         # The steps of the time course
@@ -611,35 +537,13 @@ def __(np, pd):
             meanCopyList_P.append(meanCopy_P)
             meanMuList_P.append(meanMu_P)
 
-            # # Now calculate variance and covariance
-            # var = 0
-            # cov = 0
-            # for c in range(len(yCurrent)):
-            #     if plasmidConstraint == -1:
-            #         currCopy = c
-            #     else:
-            #         currCopy = c+len(yCurrent)-1
-            #     currMu = currentGrowthRate[c]*logisticTerm
-            #     # Variance
-            #     var = var + yCurrentPercentage[c]*(currCopy-meanCopy_P)
-            #     # Covariance
-            #     cov = cov + yCurrentPercentage[c]*(currCopy-meanCopy_P)*(currMu-meanMu_P)
-
-            # VarList.append(var)
-            # CovList.append(cov)
 
         ### Return as a Dataframe for pythonic calculation
-        # Create the small DataFrame here
-        # print(len(meanCopyList_P))
-        # print(np.arange(0, len(meanCopyList_P)))
         timeList = list(np.arange(0, len(meanCopyList_P)))
-        # df = pd.DataFrame(list(zip(timeList, sumODList, meanMuList_P, VarList, CovList, meanCopyList_P)), \
-        #                   columns=['Time', 'OD', 'mu', 'var', 'cov', 'TCN'])
+
         df = pd.DataFrame(list(zip(timeList, sumODList, meanCopyList_P, meanMuList_P)), \
                           columns=['Time', 'OD', 'TCN', 'meanMu'])
         return df
-
-        # return meanCopyList_P, meanMuList_P, VarList, CovList, sumODList
     return priceResults,
 
 
@@ -652,7 +556,6 @@ def __(np):
     def responseSpeed(meanCopyList, ODList):     
         # Calculate all transoposon copy changing rate over time   
         meanCopyFinal = meanCopyList[-1]
-        print(meanCopyFinal)
 
         # if meanCopyFinal < 0.01: # effectively 0, for division purpose, give it a small value
         #     meanCopyFinal = 0.01
@@ -666,7 +569,6 @@ def __(np):
 
         if ODList[-1] > 0.1:
             rate = np.log(meanCopyFinal/meanCopyInitial)/numberGeneration
-            print('rate: ', rate)
         else:
             rate = 0
 
@@ -688,7 +590,7 @@ def __(
 ):
     ### A function to simulate the population under one atb concentration.
 
-    ### It takes 6-7 inputs (the last one is optional):
+    ### It takes 7-11 inputs (the last 4 are optional):
     ###
     ### The mandatory inputs:
     ### plasmidNum: the number of plasmids;
@@ -702,16 +604,6 @@ def __(
     ### time: the time length to simulate the ODE system for
     ### growthRate: the full list of growth rates of a population with max possible plasmids,
     ###             under a given selection
-    ###
-    ### The optional inputs:
-    ### 
-    ### y0: the initial condition, i.e. a list of population density/OD, normalized or not
-    ###     if not provided, y0 will be a list of normal distribution
-
-    ### It returns 2 lists:
-    ### currentGrowthRate: a list of the growth rates for all current subpopulation
-    ### simulatedY: the full time course of all subpopulations from t=0 to t=time
-
 
     ####### + the plasmidNum here to a range, take the range of the baslineGrowthRate - > ratio is fine
     def SimOnce(plasmidNum, transitionR, excisionEffect, dilutionR, time, growthRate, baselineGrowthRate, \
@@ -724,11 +616,13 @@ def __(
                 # Normal distribution
                 x = np.arange(0, popSize)
                 pdf = stats.norm.pdf(x, 0.80*popSize, 0.085*popSize) # both values can vary
+                # pdf = stats.norm.pdf(x, 0.90*popSize, 0.30*popSize) # for exhaustive comparison of response speed over PCN; Fig 5
                 y0 = pdf*0.000000001
 
             else: # with selection
                 x = np.arange(0, popSize)
                 pdf = stats.norm.pdf(x, 0.20*popSize, 0.085*popSize) # both values can vary
+                # pdf = stats.norm.pdf(x, 10, 0.30*popSize) # for exhaustive comparison of response speed over PCN; Fig 5
                 y0 = pdf*0.000000001
 
 
@@ -749,8 +643,8 @@ def __(
                                      max_step = t_step, atol = 1, rtol = 1)
 
         ## Figures for trouble shooting
-        
-        # # Plot the time course
+
+        # Plot the time course
         # fig = plt.figure(figsize=(5, 3))
         # for species in range(result_solve_ivp.y.shape[0]):
         #     speciesLabel = 'copy number = ' + str(species)
@@ -779,7 +673,7 @@ def __(
         # plt.title('Time Course', fontsize = 25)
         # plt.show()
 
-        # # First time point's ys
+        # First time point's ys
         # fig = plt.figure(figsize=(5, 3)) 
         # plt.bar(range(len(result_solve_ivp.y[:, 0])), result_solve_ivp.y[:, 0])
         # plt.ylabel('OD', fontsize=20)
@@ -789,7 +683,7 @@ def __(
         # plt.title('Initial Time Point', fontsize = 25)    
         # plt.show()
 
-        # # Last time point's ys
+        # Last time point's ys
         # fig = plt.figure(figsize=(5, 3)) 
         # plt.bar(range(len(result_solve_ivp.y[:, -1])), result_solve_ivp.y[:, -1])
         # plt.ylabel('OD', fontsize=20)
@@ -939,7 +833,7 @@ def __(muBaselineList):
     # Initialize all parameters
     muBaselineList_one = [muBaselineList[-1]]
     excisionE_ = 0.1
-    dilutionR_ = 0.15
+    dilutionR_ = 0.2
     time_S = 2000
     time_NoS = 3000
     y0_ = -1
@@ -961,7 +855,6 @@ def __(muBaselineList):
 def __(
     SimOnceMultiplePCN,
     Up,
-    dilutionR_,
     excisionE_,
     muBaselineList_one,
     plasmidN_,
@@ -969,13 +862,13 @@ def __(
     y0_,
 ):
     Once_LessTransition_Selection_DF, Once_LessTransition_Selection_yFinal = \
-        SimOnceMultiplePCN(muBaselineList_one, [plasmidN_], [0.1], excisionE_, dilutionR_, time_S, -1, -1, y0_, (0-Up))
+        SimOnceMultiplePCN(muBaselineList_one, [plasmidN_], [0.1], excisionE_, 0.15, time_S, -1, -1, y0_, (0-Up))
 
     Once_WithTransition_Selection_DF, Once_WithTransition_Selection_yFinal = \
-        SimOnceMultiplePCN(muBaselineList_one, [plasmidN_], [0.1], excisionE_, dilutionR_, time_S, 1, -1, y0_, (0-Up))
+        SimOnceMultiplePCN(muBaselineList_one, [plasmidN_], [0.1], excisionE_, 0.15, time_S, 1, -1, y0_, (0-Up))
 
     Once_WithTransition_Selection_LargePlasmidRange_DF, Once_WithTransition_Selection_LargePlasmidRange_yFinal = \
-        SimOnceMultiplePCN(muBaselineList_one, [plasmidN_], [0.1], excisionE_, dilutionR_, time_S, 1, 1, y0_, (0-Up))
+        SimOnceMultiplePCN(muBaselineList_one, [plasmidN_], [0.1], excisionE_, 0.15, time_S, 1, 1, y0_, (0-Up))
     return (
         Once_LessTransition_Selection_DF,
         Once_LessTransition_Selection_yFinal,
@@ -1053,15 +946,23 @@ def __(
 @app.cell
 def __(alt, plasmidN_, results_noS):
     # y axis is log(TCN)
-    alt.Chart(results_noS).mark_line(
+    F2ELeft = alt.Chart(results_noS).mark_line(
         point=alt.OverlayMarkDef(size=10, opacity=0.7)).encode(
-        x=alt.X('Time', scale=alt.Scale(domain=[0, 2000]), axis=alt.Axis(labelFontSize=30, labelAngle=0, ticks=False, grid=False, title= None)),
+        x=alt.X('Time', scale=alt.Scale(domain=[0, 1800]), axis=alt.Axis(labelFontSize=30, labelAngle=0, ticks=False, grid=False, title= None)),
         y=alt.Y('TCN', scale=alt.Scale(type="log", domain=[0.01, plasmidN_]), axis=alt.Axis(labelFontSize=30, ticks=False, values=[0.01, 1, plasmidN_], grid=False, title= None)), #, scale=alt.Scale(type="log", domain=[0.01, 100])
         color=alt.Color('κb;κf:O', legend=None).scale(scheme="purples", reverse=False), #greens, goldgreen, warmgreys
     ).properties(
         width=150,
         height=150
     ).interactive()
+
+    F2ELeft
+    return F2ELeft,
+
+
+@app.cell
+def __(F2ELeft):
+    F2ELeft.save('SF3B_muDown.pdf')
     return
 
 
@@ -1081,17 +982,30 @@ def __(alt, results_noS):
 
 
 @app.cell
+def __():
+    return
+
+
+@app.cell
 def __(alt, plasmidN_, results_selection):
     # y axis is log(TCN)
-    alt.Chart(results_selection[(results_selection['κb;κf']=='0.1; 0.1') | (results_selection['κb;κf']=='0.1; 0.1+') | (results_selection['κb;κf']=='0.2; 0.2+')]).mark_line(
+    F2ERight = alt.Chart(results_selection[(results_selection['κb;κf']=='0.1; 0.1') | (results_selection['κb;κf']=='0.1; 0.1+') | (results_selection['κb;κf']=='0.2; 0.2+')]).mark_line(
         point=alt.OverlayMarkDef(size=10, opacity=0.7)).encode(
         x=alt.X('Time', scale=alt.Scale(domain=[0, 500]), axis=alt.Axis(labelFontSize=30, labelAngle=0, ticks=False, tickCount=1, grid=False, title= None)),
-        y=alt.Y('TCN', scale=alt.Scale(domain=[10, plasmidN_], type="log"), axis=alt.Axis(labelFontSize=30, ticks=False, values=[10, plasmidN_], grid=False, title= None)),
+        y=alt.Y('TCN', scale=alt.Scale(domain=[10, plasmidN_], type="log"), axis=alt.Axis(labelFontSize=30, ticks=False, values=[10, 20, plasmidN_], grid=False, title= None)),
         color=alt.Color('κb;κf:O', legend=None, scale=alt.Scale(domain=['0.1; 0.1', '0.1; 0.1+', '0.2; 0.2+'], range=['#C3C5DE', '#A2A0C8', '#644F9C']))
     ).properties(
         width=150,
         height=150
     ).interactive()
+
+    F2ERight
+    return F2ERight,
+
+
+@app.cell
+def __(F2ERight):
+    F2ERight.save('SF3B_muUp.pdf')
     return
 
 
@@ -1107,6 +1021,11 @@ def __(alt, results_selection):
         width=150,
         height=150
     ).interactive()
+    return
+
+
+@app.cell
+def __():
     return
 
 
@@ -1171,10 +1090,10 @@ def __(
 ):
     # without selection
 
-    speed_LessT_NoS_LessPlasmidRange_Exhaustive_02 = alt.Chart(Once_LessTransition_NoSelection_LessPlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
+    F5AB = speed_LessT_NoS_LessPlasmidRange_Exhaustive_02 = alt.Chart(Once_LessTransition_NoSelection_LessPlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
         point=alt.OverlayMarkDef(size=100, opacity=0.7)).encode(
         x=alt.X('PCN', scale=alt.Scale(domain=[10, 100]), axis=alt.Axis(labelFontSize=30, values=[10, 100], labelAngle=0, ticks=False, grid=False, title=None)),
-        y=alt.Y('response speed', scale=alt.Scale(domain=[0.0, 0.4]),  axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #, scale=alt.Scale(domain=[0, 0.255]), 
+        y=alt.Y('response speed', scale=alt.Scale(domain=[-0.001, 0.4]),  axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #, scale=alt.Scale(domain=[0, 0.255]), 
         color=alt.Color('PCN:O', legend=None,).scale(scheme="plasma",reverse=True),
     ).properties(
         width=figureWidth,
@@ -1197,7 +1116,15 @@ def __(
             anchor='middle'
         )
     )
-    return speed_LessT_NoS_LessPlasmidRange_Exhaustive_02,
+
+    F5AB
+    return F5AB, speed_LessT_NoS_LessPlasmidRange_Exhaustive_02
+
+
+@app.cell
+def __():
+    # F5AB.save('SF9A_mean50_std20_noT.pdf')
+    return
 
 
 @app.cell
@@ -1212,7 +1139,7 @@ def __(
     speed_LessT_NoS_LargePlasmidRange_Exhaustive_02 = alt.Chart(Once_LessTransition_NoSelection_LargePlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
         point=alt.OverlayMarkDef(size=100, opacity=0.7)).encode(
         x=alt.X('PCN', scale=alt.Scale(domain=[10, 100]), axis=alt.Axis(labelFontSize=30, values=[10, 100], labelAngle=0, ticks=False, grid=False, title=None)),
-        y=alt.Y('response speed', scale=alt.Scale(domain=[0.0, 0.4]),  axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #, scale=alt.Scale(domain=[0, 0.255]), 
+        y=alt.Y('response speed', scale=alt.Scale(domain=[-0.001, 0.45]),  axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #, scale=alt.Scale(domain=[0, 0.255]), 
         color=alt.Color('PCN:O', legend=None,).scale(scheme="plasma",reverse=True),
     ).properties(
         width=figureWidth,
@@ -1247,10 +1174,10 @@ def __(
 ):
     # without selection
 
-    speed_WithT_NoS_LessPlasmidRange_Exhaustive_02 = alt.Chart(Once_WithTransition_NoSelection_LessPlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
+    F5AA = speed_WithT_NoS_LessPlasmidRange_Exhaustive_02 = alt.Chart(Once_WithTransition_NoSelection_LessPlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
         point=alt.OverlayMarkDef(size=100, opacity=0.7)).encode(
         x=alt.X('PCN', scale=alt.Scale(domain=[10, 100]), axis=alt.Axis(labelFontSize=30, values=[10, 100], labelAngle=0, ticks=False, grid=False, title=None)),
-        y=alt.Y('response speed', scale=alt.Scale(domain=[0.0, 0.2]),  axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #, scale=alt.Scale(domain=[0, 0.255]), 
+        y=alt.Y('response speed', scale=alt.Scale(domain=[-0.001, 0.2]),  axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #, scale=alt.Scale(domain=[0, 0.255]), 
         color=alt.Color('PCN:O', legend=None,).scale(scheme="plasma",reverse=True),
     ).properties(
         width=figureWidth,
@@ -1273,7 +1200,15 @@ def __(
             anchor='middle'
         )
     )
-    return speed_WithT_NoS_LessPlasmidRange_Exhaustive_02,
+
+    F5AA
+    return F5AA, speed_WithT_NoS_LessPlasmidRange_Exhaustive_02
+
+
+@app.cell
+def __():
+    # F5AA.save('SF9A_mean50_std20_T.pdf')
+    return
 
 
 @app.cell
@@ -1288,7 +1223,7 @@ def __(
     speed_WithT_NoS_LargePlasmidRange_Exhaustive_02 = alt.Chart(Once_WithTransition_NoSelection_LargePlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
         point=alt.OverlayMarkDef(size=100, opacity=0.7)).encode(
         x=alt.X('PCN', scale=alt.Scale(domain=[10, 100]), axis=alt.Axis(labelFontSize=30, values=[10, 100], labelAngle=0, ticks=False, grid=False, title=None)),
-        y=alt.Y('response speed', scale=alt.Scale(domain=[0.0, 0.2]),  axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #, scale=alt.Scale(domain=[0, 0.255]), 
+        y=alt.Y('response speed', scale=alt.Scale(domain=[-0.001, 0.2]),  axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #, scale=alt.Scale(domain=[0, 0.255]), 
         color=alt.Color('PCN:O', legend=None,).scale(scheme="plasma",reverse=True),
     ).properties(
         width=figureWidth,
@@ -1321,19 +1256,19 @@ def __():
 
 @app.cell
 def __(SimOnceMultiplePCN, Up, muBaselineList, popSizeList, y0_):
-    # Exhaustive, selection, 2000?
+    # Exhaustive, selection
 
     Once_LessTransition_Selection_LessPlasmidRange_Exhaustive_DF_02, Once_LessTransition_Selection_LessPlasmidRange_Exhaustive_yFinal_02 = \
-        SimOnceMultiplePCN(muBaselineList, popSizeList, [0.2], 0, 0.05, 2000, -1, -1, y0_, (0-Up))
+        SimOnceMultiplePCN(muBaselineList, popSizeList, [0.4], 0.1, 0.1, 5000, -1, -1, y0_, (0-Up))
 
     Once_LessTransition_Selection_LargePlasmidRange_Exhaustive_DF_02, Once_LessTransition_Selection_LargePlasmidRange_Exhaustive_yFinal_02 = \
-        SimOnceMultiplePCN(muBaselineList, popSizeList, [0.2], 0, 0.05, 2000, -1, 1, y0_, (0-Up))
+        SimOnceMultiplePCN(muBaselineList, popSizeList, [0.4], 0.1, 0.1, 5000, -1, 1, y0_, (0-Up))
 
     Once_WithTransition_Selection_LessPlasmidRange_Exhaustive_DF_02, Once_WithTransition_Selection_LessPlasmidRange_Exhaustive_yFinal_02 = \
-        SimOnceMultiplePCN(muBaselineList, popSizeList, [0.2], 0, 0.05, 2000, 1, -1, y0_, (0-Up))
+        SimOnceMultiplePCN(muBaselineList, popSizeList, [0.4], 0.1, 0.1, 5000, 1, -1, y0_, (0-Up))
 
     Once_WithTransition_Selection_LargePlasmidRange_Exhaustive_DF_02, Once_WithTransition_Selection_LargePlasmidRange_Exhaustive_yFinal_02 = \
-        SimOnceMultiplePCN(muBaselineList, popSizeList, [0.2], 0, 0.05, 2000, 1, 1, y0_, (0-Up))
+        SimOnceMultiplePCN(muBaselineList, popSizeList, [0.4], 0.1, 0.1, 5000, 1, 1, y0_, (0-Up))
 
     Once_LessTransition_Selection_LessPlasmidRange_Exhaustive_ResponseSpeed_02 = Once_LessTransition_Selection_LessPlasmidRange_Exhaustive_DF_02[['response speed', 'PCN']].drop_duplicates()
 
@@ -1367,10 +1302,10 @@ def __(
 ):
     # under selection
 
-    speed_LessTran_S_LessPlasmidRange_Exhaustive_02 = alt.Chart(Once_LessTransition_Selection_LessPlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
+    F5AD = speed_LessTran_S_LessPlasmidRange_Exhaustive_02 = alt.Chart(Once_LessTransition_Selection_LessPlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
         point=alt.OverlayMarkDef(size=100, opacity=0.7)).encode(
         x=alt.X('PCN', axis=alt.Axis(values=[10, 100], labelFontSize=30, labelAngle=0, ticks=False, grid=False, title = None)),
-        y=alt.Y('response speed', scale=alt.Scale(domain=[0, 0.05]), axis=alt.Axis(labelFontSize=30, ticks=False, tickCount=2, grid=False, title = None)), #, scale=alt.Scale(domain=[2.6, 5]), , scale=alt.Scale(domain=[0, 1.6]), domain=[0, 0.22]
+        y=alt.Y('response speed', scale=alt.Scale(domain=[-0.001, 0.045]), axis=alt.Axis(labelFontSize=30, ticks=False, tickCount=2, grid=False, title = None)), #, scale=alt.Scale(domain=[2.6, 5]), , scale=alt.Scale(domain=[0, 1.6]), domain=[0, 0.22]
         color=alt.Color('PCN:O', legend=None).scale(scheme="plasma",reverse=True),
     ).properties(
         width=figureWidth,
@@ -1393,7 +1328,16 @@ def __(
             anchor='middle'
         )
     )
-    return speed_LessTran_S_LessPlasmidRange_Exhaustive_02,
+
+    F5AD
+    return F5AD, speed_LessTran_S_LessPlasmidRange_Exhaustive_02
+
+
+@app.cell
+def __(F5AD):
+    # F5AD.save('SF9B_mean5_std20_noT.pdf')
+    F5AD.save('SF10C_mean10_std30_noT_withK.pdf')
+    return
 
 
 @app.cell
@@ -1403,10 +1347,10 @@ def __(
     figureHeight,
     figureWidth,
 ):
-    speed_LessT_S_LargePlasmidRange_Exhaustive_02 = alt.Chart(Once_LessTransition_Selection_LargePlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
+    SF10_noT_noK = speed_LessT_S_LargePlasmidRange_Exhaustive_02 = alt.Chart(Once_LessTransition_Selection_LargePlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
         point=alt.OverlayMarkDef(size=100, opacity=0.7)).encode(
         x=alt.X('PCN', axis=alt.Axis(values=[10, 100], labelFontSize=30, labelAngle=0, ticks=False, grid=False, title = None)),
-        y=alt.Y('response speed', scale=alt.Scale(domain=[0, 0.04]), axis=alt.Axis(labelFontSize=30, ticks=False, tickCount=2, grid=False, title = None)), #, scale=alt.Scale(domain=[2.6, 5]), , scale=alt.Scale(domain=[0, 1.6]), domain=[0, 0.22]
+        y=alt.Y('response speed', scale=alt.Scale(domain=[-0.001, 0.045]), axis=alt.Axis(labelFontSize=30, ticks=False, tickCount=2, grid=False, title = None)), #, scale=alt.Scale(domain=[2.6, 5]), , scale=alt.Scale(domain=[0, 1.6]), domain=[0, 0.22]
         color=alt.Color('PCN:O', legend=None).scale(scheme="plasma",reverse=True),
     ).properties(
         width=figureWidth,
@@ -1429,7 +1373,15 @@ def __(
             anchor='middle'
         )
     )
-    return speed_LessT_S_LargePlasmidRange_Exhaustive_02,
+
+    SF10_noT_noK
+    return SF10_noT_noK, speed_LessT_S_LargePlasmidRange_Exhaustive_02
+
+
+@app.cell
+def __():
+    # SF10_noT_noK.save('SF10C_mean10_std30_noT_noK.pdf')
+    return
 
 
 @app.cell
@@ -1441,10 +1393,10 @@ def __(
 ):
     # under selection
 
-    speed_WithT_S_LessPlasmidRange_Exhaustive_02 = alt.Chart(Once_WithTransition_Selection_LessPlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
+    F5AC = speed_WithT_S_LessPlasmidRange_Exhaustive_02 = alt.Chart(Once_WithTransition_Selection_LessPlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
         point=alt.OverlayMarkDef(size=100, opacity=0.7)).encode(
         x=alt.X('PCN', axis=alt.Axis(values=[10, 100], labelFontSize=30, labelAngle=0, ticks=False, grid=False, title = None)),
-        y=alt.Y('response speed', scale=alt.Scale(domain=[0, 0.06]), axis=alt.Axis(labelFontSize=30, tickCount=1, ticks=False, grid=False, title = None)), #, scale=alt.Scale(domain=[2.6, 5]), , scale=alt.Scale(domain=[0, 1.6]), domain=[0, 0.22]
+        y=alt.Y('response speed', scale=alt.Scale(domain=[-0.001, 0.045]), axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title = None)), #, scale=alt.Scale(domain=[2.6, 5]), , scale=alt.Scale(domain=[0, 1.6]), domain=[0, 0.22]
         color=alt.Color('PCN:O', legend=None).scale(scheme="plasma",reverse=True),
     ).properties(
         width=figureWidth,
@@ -1467,7 +1419,16 @@ def __(
             anchor='middle'
         )
     )
-    return speed_WithT_S_LessPlasmidRange_Exhaustive_02,
+
+    F5AC
+    return F5AC, speed_WithT_S_LessPlasmidRange_Exhaustive_02
+
+
+@app.cell
+def __():
+    # F5AC.save('SF9B_mean5_std20_T.pdf')
+    # F5AC.save('SF10C_mean10_std30_withT_withK.pdf')
+    return
 
 
 @app.cell
@@ -1478,10 +1439,10 @@ def __(
     figureWidth,
 ):
     # under selection
-    speed_WithT_S_LargePlasmidRange_Exhaustive_02 = alt.Chart(Once_WithTransition_Selection_LargePlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
+    SF10_T_noK = speed_WithT_S_LargePlasmidRange_Exhaustive_02 = alt.Chart(Once_WithTransition_Selection_LargePlasmidRange_Exhaustive_ResponseSpeed_02).mark_line(
         point=alt.OverlayMarkDef(size=100, opacity=0.7)).encode(
         x=alt.X('PCN', axis=alt.Axis(values=[10, 100], labelFontSize=30, labelAngle=0, ticks=False, grid=False, title = None)),
-        y=alt.Y('response speed', scale=alt.Scale(domain=[0, 0.04]), axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title = None)), #, scale=alt.Scale(domain=[2.6, 5]), , scale=alt.Scale(domain=[0, 1.6]), domain=[0, 0.22]
+        y=alt.Y('response speed', scale=alt.Scale(domain=[-0.001, 0.045]), axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title = None)), #, scale=alt.Scale(domain=[2.6, 5]), , scale=alt.Scale(domain=[0, 1.6]), domain=[0, 0.22]
         color=alt.Color('PCN:O', legend=None).scale(scheme="plasma",reverse=True),
     ).properties(
         width=figureWidth,
@@ -1504,11 +1465,14 @@ def __(
             anchor='middle'
         )
     )
-    return speed_WithT_S_LargePlasmidRange_Exhaustive_02,
+
+    SF10_T_noK
+    return SF10_T_noK, speed_WithT_S_LargePlasmidRange_Exhaustive_02
 
 
 @app.cell
 def __():
+    # SF10_T_noK.save('SF10C_mean10_std30_withT_noK.pdf')
     return
 
 
@@ -1528,8 +1492,6 @@ def __(SimOnceMultiplePCN, np, pd):
 
         # Now for each cycle
         for c in range(cycle):
-            print(c)
-            print('down')
             oneCycleDF = pd.DataFrame()
             # Going down once
             Once_DF_Down, YEnd_Down = SimOnceMultiplePCN(muBaselineList, plasmidNumList, transitionR, excisionE, dilutionR, timePair[0], jumping, plasmidAmp, y0, Up)
@@ -1539,12 +1501,10 @@ def __(SimOnceMultiplePCN, np, pd):
             print('OD: ', list(Once_DF_Down['OD'])[-1])
 
             if list(Once_DF_Down['TCN'])[-1] < 1.1:
-                print('here')
                 oneCycleDF = Once_DF_Down
                 finalCycleDF = pd.concat([finalCycleDF, oneCycleDF], axis=0, ignore_index=True)
                 break
             if np.isnan(list(Once_DF_Down['TCN'])[-1]) == True:
-                print('here')
                 oneCycleDF = Once_DF_Down
                 finalCycleDF = pd.concat([finalCycleDF, oneCycleDF], axis=0, ignore_index=True)
                 break
@@ -1554,7 +1514,6 @@ def __(SimOnceMultiplePCN, np, pd):
             ### Give next round the DF format & call using the PCN
 
             # Going up once
-            print('up')
             Once_DF_Up, YEnd_Up = SimOnceMultiplePCN(muBaselineList, plasmidNumList, transitionR, excisionE, dilutionR, timePair[1], jumping, plasmidAmp, YEnd_Down, -1*Up)
             Once_DF_Up = Once_DF_Up[['Time', 'OD', 'TCN', 'PCN', 'transition', 'jumping', 'plasmidAmp', 'Selection', 'log10(TCN)']]
             # Concate the down and up dataframes
@@ -1655,6 +1614,12 @@ def __(alt, plasmidN_, plotFinal):
 
 
 @app.cell
+def __(t0):
+    t0.save('SF3B_Fluc.pdf')
+    return
+
+
+@app.cell
 def __(DownT, UpT, np, pd, plotFinal):
     def calculateLossRateAvg(df):
         return_df_list = []
@@ -1674,7 +1639,7 @@ def __(DownT, UpT, np, pd, plotFinal):
 
                 loss_rate01 = np.log(loss01)/gen01
                 loss_rate_List = [loss_rate01]
-                
+
             # For other cases
             else:
                 loss01 = \
@@ -1683,13 +1648,13 @@ def __(DownT, UpT, np, pd, plotFinal):
                 gen01 = np.log2(currentDF[(currentDF['Time'] == DownT)]['OD'].values[0] / \
                 currentDF[(currentDF['Time'] == 0)]['OD'].values[0])
 
-                
+
                 loss02 = \
                 currentDF[(currentDF['Time'] == DownT+UpT+2)]['TCN'].values[0] / \
                 currentDF[(currentDF['Time'] == 2*DownT+UpT+2)]['TCN'].values[0]  
                 gen02 = np.log2(currentDF[(currentDF['Time'] == 2*DownT+UpT+2)]['OD'].values[0] / \
                 currentDF[(currentDF['Time'] == DownT+UpT+2)]['OD'].values[0])
-                
+
                 loss03 = \
                 currentDF[(currentDF['Time'] == 2*DownT+2*UpT+4)]['TCN'].values[0] / \
                 currentDF[(currentDF['Time'] == 3*DownT+2*UpT+4)]['TCN'].values[0]          
@@ -1727,7 +1692,7 @@ def __(calculateLossRateAvg, pd, plotFinal):
     # Order the category
     LossRatePlot['κb;κf'] = pd.Series(
                 LossRatePlot['κb;κf'], dtype="category")  
-       
+
     LossRatePlot['κb;κf'] = LossRatePlot[
         'κb;κf'
     ].cat.reorder_categories(
@@ -1745,7 +1710,7 @@ def __(calculateLossRateAvg, pd, plotFinal):
 def __(LossRatePlot, alt):
     # loss rate per generation
 
-    alt.Chart(LossRatePlot).mark_point(size=100, filled=True).encode(
+    Fig2GLeft = alt.Chart(LossRatePlot).mark_point(size=100, filled=True).encode(
         alt.X("κb;κf", axis=alt.Axis(labelFontSize=30, titleFontSize=15, ticks=False, grid=False, labels=False), title= None),
         alt.Y("lossRate", scale=alt.Scale(domain=[-0.01, 0.21]), axis=alt.Axis(labelFontSize=30, tickCount=2, ticks=False, grid=False, title=None)), #scale=alt.Scale(domain=[-0.05, 0.7]), 
         color=alt.Color('κb;κf', scale=alt.Scale(domain=['baseline', '+transposition', '+both'], range=['#C3C5DE', '#A2A0C8', '#644F9C']), legend=None)
@@ -1763,6 +1728,14 @@ def __(LossRatePlot, alt):
             anchor='middle'
         )
     ).interactive()
+
+    Fig2GLeft
+    return Fig2GLeft,
+
+
+@app.cell
+def __():
+    # Fig2GLeft.save('Fig2GLeft.pdf')
     return
 
 
@@ -1785,14 +1758,14 @@ def __(DownT, UpT, np, pd, plotFinal):
                 gen01 = \
                 np.log2(currentDF[(currentDF['Time'] == DownT+UpT+1)]['OD'].values[0] / \
                 currentDF[(currentDF['Time'] == DownT+1)]['OD'].values[0])
-                
+
                 gain02 = \
                 currentDF[(currentDF['Time'] == 2*DownT+2*UpT+3)]['TCN'].values[0] / \
                 currentDF[(currentDF['Time'] == 2*DownT+UpT+3)]['TCN'].values[0]          
                 gen02 = \
                 np.log2(currentDF[(currentDF['Time'] == 2*DownT+2*UpT+3)]['OD'].values[0] / \
                 currentDF[(currentDF['Time'] == 2*DownT+1*UpT+3)]['OD'].values[0])
-                
+
                 gain03 = \
                 currentDF[(currentDF['Time'] == 3*DownT+3*UpT+5)]['TCN'].values[0] / \
                 currentDF[(currentDF['Time'] == 3*DownT+2*UpT+5)]['TCN'].values[0]        
@@ -1826,12 +1799,11 @@ def __(DownT, UpT, np, pd, plotFinal):
 
 @app.cell
 def __(calculateGainRateAvg, pd, plotFinal):
-
     GainRatePlot = calculateGainRateAvg(plotFinal)
     # Order the category
     GainRatePlot['κb;κf'] = pd.Series(
                 GainRatePlot['κb;κf'], dtype="category")  
-       
+
     GainRatePlot['κb;κf'] = GainRatePlot[
         'κb;κf'
     ].cat.reorder_categories(
@@ -1849,9 +1821,9 @@ def __(calculateGainRateAvg, pd, plotFinal):
 def __(GainRatePlot, alt):
     # loss rate per generation
 
-    alt.Chart(GainRatePlot).mark_point(size=100, filled=True).encode(
+    Fig2GRight = alt.Chart(GainRatePlot).mark_point(size=100, filled=True).encode(
         alt.X("κb;κf", axis=alt.Axis(labelFontSize=30, titleFontSize=15, ticks=False, grid=False, labels=False), title= None),
-        alt.Y("lossRate", scale=alt.Scale(domain=[-0.01, 0.12]), axis=alt.Axis(labelFontSize=30, tickCount=1, ticks=False, grid=False, title=None)), #scale=alt.Scale(domain=[-0.05, 0.7]), 
+        alt.Y("lossRate", scale=alt.Scale(domain=[-0.01, 0.11]), axis=alt.Axis(labelFontSize=30, tickCount=1, ticks=False, grid=False, title=None)), #scale=alt.Scale(domain=[-0.05, 0.7]), 
         color=alt.Color('κb;κf', scale=alt.Scale(domain=['baseline', '+transposition', '+both'], range=['#C3C5DE', '#A2A0C8', '#644F9C']), legend=None)
     ).properties(
         width=150,
@@ -1867,11 +1839,14 @@ def __(GainRatePlot, alt):
             anchor='middle'
         )
     ).interactive()
-    return
+
+    Fig2GRight
+    return Fig2GRight,
 
 
 @app.cell
 def __():
+    # Fig2GRight.save('Fig2GRight.pdf')
     return
 
 
