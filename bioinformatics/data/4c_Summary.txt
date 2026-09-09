@@ -1,0 +1,73 @@
+# 4c: breakdown of annotation-positive / ISEScan-zero plasmids
+discordant_plasmids_unique: 1404  (gbff missing: 0)
+total_regex_matched_cds: 2069
+rohan_count_reproduced_exactly: 979/1404 plasmids (matched CDS == his transposase_count)
+
+## plasmid-level (each plasmid assigned to its most specific category: tn3 > other > unclear)
+  tn3_family_unit_transposon: 553 (39.4%)
+  other_transposase_or_IS: 709 (50.5%)
+  unclear_likely_false_positive: 35 (2.5%)
+  no_match_in_current_gbff: 107 (7.6%)
+
+## CDS-level
+  tn3_family_unit_transposon: 628
+  other_transposase_or_IS: 1365
+  unclear_likely_false_positive: 76
+
+## top products: tn3_family_unit_transposon
+  409	Tn3 family transposase
+  72	Tn3-like element Tn3 family transposase
+  53	Tn3-like element Tn5403 family transposase
+  24	Tn3-like element TnAs1 family transposase
+  20	Tn3-like element ISXc4 family transposase
+  16	Tn3-like element IS3000 family transposase
+  5	Tn3-like element ISPa38 family transposase
+  5	IS66-like element accessory protein TnpA
+  5	Tn3 family transposase post-transcriptional regulator TnpC
+  4	Tn3-like element TnAs3 family transposase
+
+## top products: other_transposase_or_IS
+  172	transposase
+  134	Rpn family recombination-promoting nuclease/putative transposase
+  64	conjugative transposon protein TraM
+  56	IS1 family transposase
+  49	IS6-like element IS257 family transposase
+  47	IS3 family transposase
+  47	IS6 family transposase
+  44	conjugative transposon protein TraN
+  43	IS91 family transposase
+  41	IS6-like element IS26 family transposase
+
+## top products: unclear_likely_false_positive
+  20	defense against restriction DarA-related protein
+  17	insoluble domain protein
+  8	insecticidal delta-endotoxin domain-containing protein
+  6	membrane protein insertase YidC
+  5	oxygen-insensitive NAD(P)H nitroreductase
+  5	guided entry of tail-anchored proteins factor 1
+  5	lipoprotein insertase outer membrane protein LolB
+  3	oxygen-insensitive NADPH nitroreductase
+  3	YidC/Oxa1 family membrane protein insertase
+  2	insulinase family protein
+
+## top 20 products overall
+  409	Tn3 family transposase
+  172	transposase
+  134	Rpn family recombination-promoting nuclease/putative transposase
+  72	Tn3-like element Tn3 family transposase
+  64	conjugative transposon protein TraM
+  56	IS1 family transposase
+  53	Tn3-like element Tn5403 family transposase
+  49	IS6-like element IS257 family transposase
+  47	IS3 family transposase
+  47	IS6 family transposase
+  44	conjugative transposon protein TraN
+  43	IS91 family transposase
+  41	IS6-like element IS26 family transposase
+  38	IS30 family transposase
+  34	RNA-guided endonuclease InsQ/TnpB family protein
+  33	conjugative transposon protein TraK
+  27	IS110 family RNA-guided transposase
+  27	IS1380-like element ISEcp1 family transposase
+  26	IS5 family transposase
+  24	Tn3-like element TnAs1 family transposase

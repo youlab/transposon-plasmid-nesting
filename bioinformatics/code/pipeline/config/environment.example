@@ -1,0 +1,23 @@
+# Copy these exports to a private shell configuration; do not commit secrets.
+export NEE_PROJECT_ROOT="/path/to/4.Code"
+export NEE_DATA_DIR="/path/to/1_Data"
+export NEE_RESULTS_DIR="/path/to/2_Result"
+export NEE_DATABASE_DIR="/path/to/1_Data/database"
+
+export NCBI_EMAIL="your_email@example.org"
+export NCBI_API_KEY=""  # optional
+
+export PYTHON_BIN="python"
+export ISESCAN_BIN="isescan.py"
+export DIAMOND_BIN="diamond"
+export AMRFINDER_BIN="amrfinder"
+export AMRFINDER_DB=""  # optional explicit AMRFinderPlus database directory
+
+export CARD_FASTA="$NEE_DATABASE_DIR/card_protein_homolog_model.fasta"
+export VFDB_FASTA="$NEE_DATABASE_DIR/VFDB_setB_pro.fas"
+export BACMET_FASTA="$NEE_DATABASE_DIR/BacMet2_EXP.fasta"
+export TADB_FASTA="$NEE_DATABASE_DIR/TADB2_protein.fasta"
+
+# Optional figure font configuration.
+export NEE_FONT_FAMILY="DejaVu Sans"
+# export NEE_FONT_FILE="/path/to/font.ttf"

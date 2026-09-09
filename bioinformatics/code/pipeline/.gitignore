@@ -1,0 +1,17 @@
+# Credentials and private environment files
+.env
+*.env
+!config/environment.example
+ncbi_config.env
+
+# Generated data and results
+1_Data/
+2_Result/
+slurm-*.out
+
+# Python/editor caches
+__pycache__/
+*.py[cod]
+.DS_Store
+.idea/
+.vscode/

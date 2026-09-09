@@ -1,0 +1,6 @@
+# Step 7: cargo vs background enrichment (pident>=80, qcov>=70)
+cargo_total: 511814, background_total: 2811287 (copy-weighted)
+Antibiotic resistance (CARD): cargo 0.0733 vs bg 0.0053 | OR=14.759 | P=0.000e+00 | q=0.000e+00
+Virulence (VFDB): cargo 0.0292 vs bg 0.0089 | OR=3.345 | P=0.000e+00 | q=0.000e+00
+Metal/biocide resistance (BacMet): cargo 0.0279 vs bg 0.0152 | OR=1.859 | P=0.000e+00 | q=0.000e+00
+Toxin-antitoxin (TADB): cargo 0.0297 vs bg 0.0123 | OR=2.452 | P=0.000e+00 | q=0.000e+00

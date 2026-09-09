@@ -1,0 +1,7 @@
+# Step 3: gbff -> fna + exact-md5 dedup summary
+date: 2026-07-31T14:44:30
+gbff_files_input: 26693
+accessions_before_dedup: 26693
+accessions_skipped: 0
+unique_sequences_after_dedup: 25801
+exact_duplicates_removed: 892

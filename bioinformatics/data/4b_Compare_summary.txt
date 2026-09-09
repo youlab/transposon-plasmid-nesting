@@ -1,0 +1,11 @@
+# 4b side analysis: annotation-string vs sequence-level IS counts
+accessions_with_rohan_hit: 26693
+paired_with_isescan: 26693  (missing tsv: 0)
+isescan_positive_rate_accession_level: 0.9449 (25222/26693)
+isescan_zero_accessions: 1471 (unique sequences: 1404/25801 -> see 4c breakdown)
+spearman_rho: 0.9238  p: 0.000e+00  (secondary; units differ)
+multicopy_samefamily_plasmids_raw: 19137 (unique sequences with >=2 same-family copies)
+multicopy_distinct_context_plasmids: 19044 (segmental duplication excluded; BLASTN flank=±200bp, pident>=90, qcov>=80)
+multicopy_detail_csv: 2_Result/4b_Multicopy_families.csv
+outlier_csv: 2_Result/4b_Outlier_plasmids.csv (top 20 high outliers)
+comparison_csv: 2_Result/4b_Transposase_count_comparison.csv

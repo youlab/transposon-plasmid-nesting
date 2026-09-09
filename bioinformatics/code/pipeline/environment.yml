@@ -1,0 +1,11 @@
+name: nee-bioinformatics
+channels:
+  - conda-forge
+dependencies:
+  - python=3.13.14=h6add32d_100_cp313
+  - biopython=1.87=py313h07c4f96_0
+  - numpy=2.4.6=py313hf6604e3_0
+  - scipy=1.17.1=py313h4b8bb8b_1
+  - diamond=2.2.1=he361c42_0
+  - isescan=1.7.3=h7b50bb2_0
+  - matplotlib=3.10.9

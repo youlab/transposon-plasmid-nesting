@@ -1,0 +1,29 @@
+# 6a: cargo functional inventory (pident>=90, qcov>=60)
+cargo_proteins_total: 511814 (unique: 163041; cargo CDS: 511814)
+cargo_annotated_any_db: 72273 copies (14.1%), 5508 unique
+cargo_hypothetical_product: 115681/511814 (22.6% of cargo CDS)
+
+## Antibiotic resistance (CARD)
+  unique proteins with hit: 1212
+  weighted copies: 37311 (7.29% of cargo)
+  plasmids carrying >=1: 6953
+  top genes: qacEdelta1(2240); sul1(1733); TEM-1(1671); sul2(1540); mphA(1427); Mrx(1398); tet(A)(1290); APH(3'')-Ib(1244); APH(6)-Id(1222); APH(3')-Ia(990)
+
+## Virulence (VFDB)
+  unique proteins with hit: 2239
+  weighted copies: 13830 (2.70% of cargo)
+  plasmids carrying >=1: 2494
+  top genes: sitB(514); sitA(512); sitC(509); sitD(507); iutA(480); iucA(467); iucC(464); iucB(449); hlyA(379); hlyC(374)
+
+## Metal/biocide resistance (BacMet)
+  unique proteins with hit: 844
+  weighted copies: 11497 (2.25% of cargo)
+  plasmids carrying >=1: 3394
+  top genes: qacEdelta1(2240); merT(878); merP(634); merR(474); merD(405); merA(334); arsC(323); merE(308); merB(276); arsB(270)
+
+## Toxin-antitoxin (TADB)
+  unique proteins with hit: 1295
+  weighted copies: 12490 (2.44% of cargo)
+  plasmids carrying >=1: 4704
+  top genes: plasmid maintenance protein VagC(789); plasmid maintenance protein CcdB(727); plasmid stable inheritance protein(666); stable plasmid inheritance protein(627); plasmid maintenance protein CcdA(626); T6369(559); plasmid maintenance protein VagD(418); hypothetical protein pO157p69(409); hypothetical protein pO157p70(395); small toxic polypeptide(394)
+

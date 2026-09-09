@@ -1,0 +1,6 @@
+# Step 8: STRICT-mode enrichment (pident>=90, qcov>=60, weighted = CDS-level)
+cargo_total: 240817, background_total: 3082284 (copy-weighted)
+Antibiotic resistance (CARD): cargo 0.0831 vs bg 0.0104 | OR=8.624 | P=0.000e+00 | q=0.000e+00
+Virulence (VFDB): cargo 0.0357 vs bg 0.0090 | OR=4.072 | P=0.000e+00 | q=0.000e+00
+Metal/biocide resistance (BacMet): cargo 0.0236 vs bg 0.0138 | OR=1.731 | P=3.623e-282 | q=3.623e-282
+Toxin-antitoxin (TADB): cargo 0.0221 vs bg 0.0109 | OR=2.047 | P=0.000e+00 | q=0.000e+00

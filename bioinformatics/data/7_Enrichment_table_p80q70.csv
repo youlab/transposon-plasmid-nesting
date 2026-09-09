@@ -1,0 +1,5 @@
+category,label,cargo_hits,cargo_total,cargo_frac,bg_hits,bg_total,bg_frac,odds_ratio,p_fisher,q_fdr_bh
+card,Antibiotic resistance (CARD),37505,511814,0.0733,14982,2811287,0.0053,14.759,0.000e+00,0.000e+00
+vfdb,Virulence (VFDB),14961,511814,0.0292,25082,2811287,0.0089,3.345,0.000e+00,0.000e+00
+bacmet,Metal/biocide resistance (BacMet),14285,511814,0.0279,42770,2811287,0.0152,1.859,0.000e+00,0.000e+00
+tadb,Toxin-antitoxin (TADB),15222,511814,0.0297,34709,2811287,0.0123,2.452,0.000e+00,0.000e+00

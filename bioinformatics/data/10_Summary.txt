@@ -1,0 +1,30 @@
+# Step 10: sequence-level evidence of multiple jumps
+rule: identical IS sequence (md5, orientation-free) at >=2 distinct
+insertion contexts (outer 10 bp flanks differ)
+
+stage 1 - plasmids with >=2 same-family IS copies: 19137
+stage 2 - ...with >=1 EXACTLY identical copy pair: 9729 (50.8% of stage 1)
+stage 3 - ...with the identical element at >=2 DISTINCT insertion contexts: 9244 (48.3% of stage 1, 35.8% of all 25,801 plasmids)
+
+top families among stage-3 plasmids:
+  IS6: 5609
+  IS5: 1239
+  IS3: 1169
+  IS1: 770
+  IS66: 398
+  IS110: 382
+  IS30: 381
+  new: 337
+  IS256: 334
+  IS21: 332
+  IS4: 269
+  IS91: 268
+  IS630: 251
+  ISNCY: 111
+  IS200/IS605: 75
+
+caveats: (i) post-insertion SNP drift in the 10 bp
+flank counts as 'different site' (anti-conservative); (ii) bare
+tandem IS-IS pairs count as different sites (adjacent insertion
+is still an insertion event; IS26-style targeted insertion);
+tandem amplification ARRAYS are excluded (junctions identical).

@@ -1,0 +1,10 @@
+# Step 5: cargo extraction summary
+mode: relaxed (non-adjacent allowed)
+max_span_bp: 25000
+plasmids_with_IS_processed: 24397  (no IS: 1404 skipped; gbff missing: 0)
+plasmids_with_samefamily_pair: 19137
+plasmids_with_cargo: 17227
+cargo_proteins: 511814
+background_proteins: 2811287
+samefamily_pairs_in_span_distribution: 562900 (>200000 bp not listed: 68172)
+outputs: 5_Cargo.faa, 5_Background.faa, 5_Cargo_table.csv

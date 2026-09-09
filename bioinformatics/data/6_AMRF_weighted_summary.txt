@@ -1,0 +1,15 @@
+AMRFinderPlus validation (relaxed mode; NCBI refgene DB 2026-01-21.1; -p protein mode on md5-deduplicated proteins, copy-weighted back to full CDS counts)
+
+cargo:       1,333 unique hits -> 38,560 weighted (7.53% of 511,814 cargo proteins)
+background:  1,460 unique hits -> 15,870 weighted (0.56% of 2,811,287 background proteins)
+OR (weighted) = 14.35, P = 0 (Fisher exact)
+plasmids with >=1 AMRF cargo hit: 7,023 (27.2% of 25,801)
+
+Comparison with CARD-diamond (90/60):
+  CARD: cargo 37,311 (7.29%) vs bg 14,755 (0.52%) -> OR = 14.90; plasmids 6,953 (26.9%)
+  AMRF: cargo 38,560 (7.53%) vs bg 15,870 (0.56%) -> OR = 14.35; plasmids 7,023 (27.2%)
+
+Hit quality: median identity 99.8% (p10 97.4%), median coverage 100%;
+92.5% EXACTP/ALLELEP/BLASTP, 5% HMM-only.
+Notable cargo genes: blaNDM-1, blaOXA-48, blaOXA-181, blaIMP, blaTEM-1 (1,669 copies),
+floR, tet(A), aph(6)-Id, sul1, optrA, tet(M), mrx(A), erm(B).

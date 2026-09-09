@@ -1,0 +1,22 @@
+Strict mode: 15172 plasmids with cargo (58.8% of 25801); 240817 cargo proteins; 3082284 background proteins
+
+=== pident >= 90%, qcov >= 60% ===
+CARD    cargo 8.31% (20,011 of 240,817) | bg 1.04% (32,055 of 3,082,284) | OR=8.62 | P=0.0e+00
+VFDB    cargo 3.57% (8,590 of 240,817) | bg 0.90% (27,750 of 3,082,284) | OR=4.07 | P=0.0e+00
+BacMet  cargo 2.36% (5,675 of 240,817) | bg 1.38% (42,386 of 3,082,284) | OR=1.73 | P=3.6e-282
+TADB    cargo 2.21% (5,330 of 240,817) | bg 1.09% (33,704 of 3,082,284) | OR=2.05 | P=0.0e+00
+  CARD    plasmids with cargo hits: 5,630 (21.8% of 25801)
+  VFDB    plasmids with cargo hits: 1,740 (6.7% of 25801)
+  BacMet  plasmids with cargo hits: 1,801 (7.0% of 25801)
+  TADB    plasmids with cargo hits: 2,254 (8.7% of 25801)
+
+=== pident >= 80%, qcov >= 70% ===
+CARD    cargo 8.35% (20,109 of 240,817) | bg 1.05% (32,378 of 3,082,284) | OR=8.58 | P=0.0e+00
+VFDB    cargo 3.81% (9,184 of 240,817) | bg 1.00% (30,859 of 3,082,284) | OR=3.92 | P=0.0e+00
+BacMet  cargo 2.91% (7,011 of 240,817) | bg 1.62% (50,044 of 3,082,284) | OR=1.82 | P=0.0e+00
+TADB    cargo 2.67% (6,435 of 240,817) | bg 1.41% (43,496 of 3,082,284) | OR=1.92 | P=0.0e+00
+  CARD    plasmids with cargo hits: 5,647 (21.9% of 25801)
+  VFDB    plasmids with cargo hits: 1,863 (7.2% of 25801)
+  BacMet  plasmids with cargo hits: 2,280 (8.8% of 25801)
+  TADB    plasmids with cargo hits: 2,826 (11.0% of 25801)
+
