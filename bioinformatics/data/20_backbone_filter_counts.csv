@@ -1,0 +1,5 @@
+mode,group,raw_cds_count,excluded_cds_count,retained_cds_count,raw_carriers,excluded_carriers,retained_carriers
+relaxed,background,2811287,326596,2484691,21533,17264,21523
+relaxed,cargo,511814,42031,469783,17227,9504,17185
+strict,background,3082243,348798,2733445,23699,19212,23694
+strict,cargo,240858,19829,221029,15172,6028,15103

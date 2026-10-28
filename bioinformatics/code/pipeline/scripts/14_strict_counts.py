@@ -1,16 +1,8 @@
 #!/usr/bin/env python3
-"""
-14_strict_counts.py
-Mirror of the relaxed results table for STRICT mode: per category, both
-thresholds (90/60 and 80/70) — weighted cargo/background hits, Fisher OR,
-and the number of unique plasmids carrying >=1 cargo hit (instance-level
-scan of 5strict_Cargo.faa). No new BLAST: re-filters existing 8_*_vs_*.tsv.
-
-Usage:  python scripts/14_strict_counts.py
-Input:  2_Result/3_Seqhash_map.csv, 2_Result/5strict_Cargo.faa,
-        2_Result/8_{Cargo,Background}_unique_map.csv,
-        2_Result/8_{Cargo,Background}_vs_{card,vfdb,bacmet,tadb}.tsv
-Output: 2_Result/8b_Strict_counts.txt (+ stdout)
+"""Purpose: report strict-mode counts at the 90/60 and 80/70 thresholds.
+Inputs: 03_plasmid_sequence_hashes.csv, 07_cargo_strict.faa, 13 strict maps and hit tables.
+Output: work/processed/14_strict_counts.txt.
+Usage: python code/pipeline/scripts/14_strict_counts.py
 """
 import csv
 import hashlib
@@ -20,9 +12,22 @@ from collections import defaultdict
 from scipy.stats import fisher_exact
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
-RES = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+DATA_DIR = os.path.abspath(os.environ.get(
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
+RESULTS_DIR = os.path.abspath(os.environ.get(
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+RES = RESULTS_DIR
 CATS = ["card", "vfdb", "bacmet", "tadb"]
 LABELS = {"card": "CARD", "vfdb": "VFDB", "bacmet": "BacMet", "tadb": "TADB"}
 THRESHOLDS = [(90.0, 60.0), (80.0, 70.0)]
@@ -65,7 +70,7 @@ def load_hits(path, umap, pid, qcov):
 def plasmid_counts(hit_sets):
     """unique plasmids (representative accessions) with >=1 cargo hit per cat."""
     accs = defaultdict(set)
-    with open(os.path.join(RES, "5strict_Cargo.faa")) as f:
+    with open(input_path("07_cargo_strict.faa", generated=True)) as f:
         for line in f:
             if line.startswith(">"):
                 acc = line[1:].split("|")[0]
@@ -78,11 +83,11 @@ def plasmid_counts(hit_sets):
 
 
 def main():
-    total_plasmids = count_csv_rows(os.path.join(RES, "3_Seqhash_map.csv"))
+    total_plasmids = count_csv_rows(input_path("03_plasmid_sequence_hashes.csv", generated=True))
     strict_cargo_plasmids = count_fasta_accessions(
-        os.path.join(RES, "5strict_Cargo.faa"))
-    mc = load_map(os.path.join(RES, "8_Cargo_unique_map.csv"))
-    mb = load_map(os.path.join(RES, "8_Background_unique_map.csv"))
+        input_path("07_cargo_strict.faa", generated=True))
+    mc = load_map(os.path.join(RES, "13_cargo_strict_unique_map.csv"))
+    mb = load_map(os.path.join(RES, "13_background_strict_unique_map.csv"))
     tc, tb = sum(mc.values()), sum(mb.values())
 
     lines = [
@@ -93,9 +98,9 @@ def main():
         lines.append(f"=== pident >= {pid:g}%, qcov >= {qcov:g}% ===")
         hit_sets = {}
         for cat in CATS:
-            cw, hs = load_hits(os.path.join(RES, f"8_Cargo_vs_{cat}.tsv"),
+            cw, hs = load_hits(os.path.join(RES, f"13_cargo_strict_vs_{cat}.tsv"),
                                mc, pid, qcov)
-            bw, _ = load_hits(os.path.join(RES, f"8_Background_vs_{cat}.tsv"),
+            bw, _ = load_hits(os.path.join(RES, f"13_background_strict_vs_{cat}.tsv"),
                               mb, pid, qcov)
             hit_sets[cat] = hs
             odds, p = fisher_exact([[cw, tc - cw], [bw, tb - bw]])
@@ -113,7 +118,7 @@ def main():
         lines.append("")
     out = "\n".join(lines)
     print(out)
-    with open(os.path.join(RES, "8b_Strict_counts.txt"), "w") as f:
+    with open(os.path.join(RES, "14_strict_counts.txt"), "w") as f:
         f.write(out + "\n")
 
 

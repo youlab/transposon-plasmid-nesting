@@ -1,0 +1,6 @@
+# Corrected strict four-category enrichment (current CDS input; identity >=90%, query coverage >=60%)
+cargo_total: 240858; background_total: 3082243
+card: cargo 20011/240858; background 32055/3082243; OR=8.6220019103900665; P=7.910332e-9062; BH(4) q=3.164133e-9061
+vfdb: cargo 8590/240858; background 27750/3082243; OR=4.0708015406868459; P=1.042292e-2104; BH(4) q=2.084584e-2104
+bacmet: cargo 5675/240858; background 42386/3082243; OR=1.730575935243452; P=5.560064e-282; BH(4) q=5.560064e-282
+tadb: cargo 5330/240858; background 33704/3082243; OR=2.0468922137745662; P=4.070302e-427; BH(4) q=5.427070e-427

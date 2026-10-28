@@ -1,80 +1,40 @@
-# Essential data supporting the bioinformatics analyses
+# Processed data and figure inputs
 
-Ha et al., *Transposon–plasmid nesting shapes population-level gene-dosage
-responses to fluctuating environments* (Nature Ecology & Evolution, manuscript
-NATECOLEVOL-25061819).
+This folder contains data used by the scripts, not rendered figures or execution logs. The large CDS table remains compressed. Original raw sequences, databases and temporary search files are not bundled.
 
-This folder contains the essential data **used or generated** by the
-bioinformatics analyses reported in the manuscript (Fig. 1a–d, Supplementary
-Fig. 1, Tables S4–S5, Supplemental Note 1). File names and step numbers match
-the analysis code in `../code/pipeline/scripts/`.
+| File | Content / use |
+|---|---|
+| `01_transposase_counts.csv` | Per-replicon transposase-annotation counts; Figure 1a/b and accession selection. |
+| `01_plasmid_copy_number_estimates.csv` | Published PIRA copy-number estimates; Figure 1b joins by replicon SeqID. |
+| `01_transposase_positive_accessions.txt` | Accessions selected for sequence-level processing. |
+| `03_plasmid_sequence_hashes.csv` | Exact sequence deduplication map; 26,693 accessions / 25,801 representatives. |
+| `03_deduplication_summary.txt` | Sequence-deduplication totals. |
+| `04_isescan_results.tar.gz` | Per-representative ISEScan TSVs; extract only when running upstream steps. |
+| `05_transposase_count_comparison.csv` | Per-accession annotation counts versus ISEScan IS counts. |
+| `05_transposase_count_summary.txt` | Summary of the IS-count comparison. |
+| `06_discordant_cds.csv` | Detailed annotation-positive / ISEScan-negative records. |
+| `06_discordant_summary.txt` | Summary of the discordant annotations. |
+| `07_cargo_summary_relaxed.txt; 07_cargo_summary_strict.txt` | Current cargo/background counts from the supplied CDS membership input. |
+| `09_amrfinder_cargo.tsv; 09_amrfinder_background.tsv` | Original AMRFinderPlus outputs; not backbone-filtered reruns. |
+| `10_cargo_function_inventory.csv; 10_cargo_top_genes.csv; 10_cargo_function_summary.txt` | Original functional cargo inventory and reported gene/carrier summaries. |
+| `11_enrichment_relaxed.csv` | Current original four-category relaxed enrichment; Figure 1d source. |
+| `13_enrichment_strict.csv` | Current original four-category strict sensitivity result. |
+| `11_enrichment_relaxed_summary.txt; 13_enrichment_strict_summary.txt` | Readable summaries of those current enrichment results. |
+| `11_enrichment_relaxed_p80q70.csv; 11_enrichment_relaxed_p80q70_summary.txt` | Original 80% identity / 70% query-coverage sensitivity output; a separate input/threshold analysis, not regenerated from the supplied 90/60 hit flags. |
+| `12_amrfinder_enrichment_summary.txt` | Original AMRFinderPlus sensitivity summary; not rerun after backbone filtering. |
+| `15_is_insertion_contexts.csv; 15_is_insertion_summary.txt; 15_is_insertion_examples.txt` | Per-plasmid identical-IS / distinct-context analysis supporting Figure 1c and Table S4. |
+| `19_cds_annotation_membership.csv.gz` | One row per eligible CDS per cargo mode: accession, coordinates, PlasAnn category, cargo/background group, backbone/retention flags and all four original functional-hit flags. Contains both retained and excluded rows; read directly as gzip. |
+| `20_cds_counts_before_filtering.csv` | Integer counts and denominators for the original four categories, for both groups and cargo modes. |
+| `20_cds_counts_after_filtering.csv` | Integer retained counts and denominators for the 4 backbone-filtered comparison categories. |
+| `20_backbone_filter_counts.csv` | Raw, excluded and retained CDS counts, separately by group and cargo mode. |
+| `21_backbone_enrichment.csv` | Two-sided pooled-CDS Fisher and BH(4) results; relaxed rows supply article Extended Figure 1, while strict rows are SI sensitivity results where cited. |
 
+## Scientific scope
 
+The supplied CDS input includes 3,323,101 eligible CDSs per cargo mode (6,646,202 rows across relaxed and strict), not 6,646,202 distinct proteins. Corrected raw cargo/background totals are 511,814 / 2,811,287 (relaxed) and 240,858 / 3,082,243 (strict). After backbone exclusion, totals are 469,783 / 2,484,691 and 221,029 / 2,733,445, respectively. Filtered odds ratios (CARD, VFDB, BacMet, TADB) are 14.444048 / 3.467556 / 1.679686 / 2.601322 for relaxed and 8.389165 / 4.100302 / 1.673068 / 2.019852 for strict. The strict comparison is an SI sensitivity analysis only where cited; article Extended Figure 1 uses the relaxed results.
 
-## Contents
+Original comparisons always use four functional categories. The WithTA backbone-filtered comparison uses 4. TA-positive CDSs remain in the denominators unless excluded by the independent backbone rule.
 
-### Figure 1a/b source data (external inputs)
+The supplied membership master and six derived CSVs are the corrected current WithTA outputs. The 07 extractor checks strict adjacent pairs and the circular last/first pair, and includes CDS coordinates equal to either wrap boundary. The correction changes cargo/background group labels only; CDS coordinates, PlasAnn categories and all four functional-hit flags are unchanged. Separate 80/70 and AMRFinder sensitivity outputs retain their own analysis scope; their source searches cannot be recreated by changing the supplied 90/60 Boolean hit flags. Relative to the previous local 9/8 strict output, 41 additional wrap-qualified CDSs are included; none has a hit in any of the four functional databases. Five same-locus records differ only in coordinates and remain present.
 
-| File | Content | Supports |
-|---|---|---|
-| `1_Transposase_counts.csv.gz` | per-replicon transposase-annotation counts for the full curated plasmid dataset (63,425 replicons; original file name `transposase-counts.csv`, analysis input from R. Maddamsetti, [darwinian-circuit](https://github.com/rohanmaddamsetti/darwinian-circuit)) | Fig. 1a densities (53.2 plasmid / 10.6 chromosome annotations per Mbp), Fig. 1b hit counts |
-| `1_PIRA_PCN_estimates.csv.gz` | published pseuPIRA plasmid copy-number estimates (16,861 rows: 12,006 plasmids from 4,644 genomes; original file `41467_2025_61205_MOESM3_ESM.csv`, Supplementary Information of Maddamsetti et al., *Nat. Commun.* 16:6023 (2025), DOI 10.1038/s41467-025-61205-2; downloaded 2026-08-31) | Fig. 1b PCN bins |
-
-Note on Fig. 1b: joining these two tables on `SeqID` (replicon accession;
-`AnnotationAccession` is the per-assembly GCF and must not be used as the join
-key) reproduces the PCN-binned fractions with slightly different denominators
-(1,923/2,322; 4,198/6,396; 166/2,124; 6/166 plasmids per bin = 82.8 / 65.6 /
-7.8 / 3.6%) than the current figure labels (1,825/2,192; 3,972/6,012;
-155/2,051; 6/163 = 83.3 / 66.1 / 7.6 / 3.7%), because the figure was drawn
-with an earlier-coverage version of the PIRA table that has not been made
-public. The published table included here is the traceable public source; the
-qualitative pattern is unchanged. (11,010 plasmids join in total; 2 with
-PIRACopyNumber ≥ 1000 fall outside the four displayed bins.)
-
-### Dataset definition and deduplication
-
-| File | Content | Supports |
-|---|---|---|
-| `1_Hit_plasmids.txt` | 26,693 plasmid accessions with ≥1 transposase-annotation hit (selected from `transposase-counts.csv`) | sequence-level dataset, SI Note 1 |
-| `3_Seqhash_map.csv` | exact-sequence MD5 → accession(s) mapping (dedup 26,693 → 25,801 unique sequences) | denominators used throughout |
-| `3_Dedup_summary.txt` | deduplication audit (892 exact duplicates in 503 multi-copy groups) | Methods |
-
-### Sequence-level confirmation of the annotation screen
-
-| File | Content | Supports |
-|---|---|---|
-| `4_ISEScan_fna_tsv.tar.gz` | 25,801 per-plasmid ISEScan v1.7.3 result tables (`.fna.tsv`: IS family, boundaries, complete/partial), including header-only tables for the 1,404 no-hit sequences | all sequence-level analyses |
-| `4b_Transposase_count_comparison.csv` | per-accession annotation-based transposase counts vs ISEScan IS-copy counts | Supplementary Fig. 1 (94.5%, Spearman ρ = 0.92, log–log slope 0.96) |
-| `4b_Compare_summary.txt` | summary statistics for the comparison | Supplementary Fig. 1 legend |
-| `4c_Discordant_cds.csv`, `4c_Summary.txt` | breakdown of the 1,404 annotation-positive / ISEScan-negative plasmids (Tn3-family 39.4%, other TEs 50.5%, regex FP 2.5%, annotation drift 7.6%) | SI Note 1 |
-
-### Cargo definition
-
-| File | Content | Supports |
-|---|---|---|
-| `5_Cargo_table.csv.gz` | per-CDS cargo assignments under the primary (relaxed) definition: same-family IS pair span ≤ 25 kb, IS-overlapping CDS excluded; records IS family and flank context | all cargo numbers |
-| `5strict_Cargo_table.csv.gz` | same, strict adjacent-only sensitivity definition | sensitivity |
-| `5_Summary.txt`, `5strict_Summary.txt` | plasmid/protein totals (17,227/25,801 = 66.77%; 511,814 cargo proteins relaxed) and IS-pair span statistics validating the 25 kb threshold | SI Note 1, Table S5 legend |
-
-### Functional annotation and enrichment
-
-| File | Content | Supports |
-|---|---|---|
-| `6_AMRF_Cargo.tsv`, `6_AMRF_Background.tsv` | raw AMRFinderPlus outputs (NCBI Reference Gene Catalog 2026-01-21.1) | orthogonal AMR validation |
-| `6_AMRF_weighted_summary.txt` | copy-weighted AMRFinderPlus enrichment (OR = 14.35) | SI Note 1 |
-| `6a_Cargo_function_inventory.csv` | per-hit inventory of functional cargo (database, gene, identity, coverage, copies, plasmid, IS family) at the primary threshold | reported category counts (6,953 / 2,494 / 3,394 / 4,704 plasmids) |
-| `6a_Cargo_top_genes.csv`, `6a_Summary.txt` | top cargo genes per category; inventory summary | text |
-| `7_Enrichment_table.csv`, `7_Summary.txt` | **primary enrichment** (DIAMOND pident ≥ 90 / qcov ≥ 60; copy-weighted; Fisher exact, BH-FDR): cargo 7.29 / 2.70 / 2.25 / 2.44% vs background 0.52 / 0.80 / 1.30 / 0.94%; OR 14.90 / 3.44 / 1.74 / 2.62 | Fig. 1d, Table S5 |
-| `7_Enrichment_table_p80q70.csv`, `7_Summary_p80q70.txt` | 80/70 threshold sensitivity | SI Note 1 |
-| `8_Enrichment_table.csv`, `8_Summary.txt`, `8b_Strict_counts.txt` | strict-definition sensitivity (OR 8.62 / 4.07 / 1.73 / 2.05) and counts at both thresholds | SI Note 1 |
-
-### Identical IS copies at distinct insertion contexts
-
-| File | Content | Supports |
-|---|---|---|
-| `10_Summary.txt` | funnel: 19,137 (≥2 same-family copies) → 9,729 (exact-identical pair) → **9,244 plasmids (35.8% of 25,801)** with the same exact IS sequence at ≥2 distinct 10-bp outer-flank contexts | Fig. 1c, Table S4 |
-| `10_Per_plasmid.csv` | per-plasmid results | Table S4 |
-| `10_Jump_examples.txt` | representative example records (accession, IS family, distinct flanks) | sequence-level interpretation |
-
----
-
+The two public Figure 1a/b source tables are included once per independent package; duplicate gzip copies were removed. Joining them on SeqID gives PCN-bin fractions 1,923/2,322, 4,198/6,396, 166/2,124 and 6/166; 11,010 records join, with two >=1000 outside the plotted bins.

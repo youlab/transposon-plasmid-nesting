@@ -1,38 +1,13 @@
 #!/usr/bin/env python3
+"""Purpose: extract relaxed or strict transposon cargo and same-plasmid background.
+Inputs: 03_plasmid_sequence_hashes.csv, work/raw/gbff/*.gbff, work/processed/04_isescan/fna/*.tsv.
+Outputs: 07_cargo_relaxed.faa, 07_background_relaxed.faa, strict equivalents, and membership tables.
+Usage: python code/pipeline/scripts/07_extract_cargo.py [max_span_bp] [output_prefix] [--strict] [--limit N]
 """
-07_extract_cargo.py
-Define transposon cargo from ISEScan results (TSV) and RefSeq CDS annotations
-(GBFF).
-
-Cargo definition (composite-transposon logic, relaxed adjacency):
-  - Two SAME-FAMILY IS copies on one plasmid with 0 < span <= MAX_SPAN form a
-    candidate pair; adjacency NOT required (nested IS inside the span are
-    allowed). Both arcs of the circular plasmid are considered (linear arc
-    and wrap-around arc).
-  - Cargo = CDS fully inside the UNION of qualifying arcs; CDS overlapping
-    any IS copy (transposases) are EXCLUDED from both cargo and background.
-  - Each CDS is written once (flags dedup).
-  - --strict reproduces the original adjacent-only rule (+ last/first wrap)
-    as a sensitivity check (outputs get the 5strict_ prefix).
-  - Partial IS copies (tsv type=p) are valid flanks; the cargo table records
-    each flank's type.
-Scope note: plasmids with ZERO IS copies (the 1,404 no-hit set) contribute
-nothing — no cargo by construction, and their CDS are NOT background either
-(background = non-cargo, non-IS CDS on IS-carrying plasmids only).
-
-Usage:
-    python scripts/07_extract_cargo.py [max_span_bp] [--strict] [--limit N]
-    max_span_bp: default 25000; 0 = no span limit
-
-Defaults (relative to the repository root):
-    Input:  2_Result/3_Seqhash_map.csv, 1_Data/gbff/*.gbff,
-            2_Result/4_ISEScan/fna/*.fna.tsv
-    Output: 2_Result/5_Cargo.faa, 5_Background.faa, 5_Cargo_table.csv,
-            5_Span_distribution.csv/.pdf, 5_Summary.txt
-            (prefix 5strict_ when --strict)
-"""
+import argparse
 import csv
 import glob
+import gzip
 import os
 import sys
 
@@ -42,35 +17,64 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 DATA_DIR = os.path.abspath(os.environ.get(
-    "NEE_DATA_DIR", os.path.join(ROOT, "1_Data")))
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
 RESULTS_DIR = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
-MAP_CSV = os.path.join(RESULTS_DIR, "3_Seqhash_map.csv")
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+
+MAP_CSV = input_path("03_plasmid_sequence_hashes.csv", generated=True)
 GBFF_DIR = os.path.join(DATA_DIR, "gbff")
-TSV_DIR = os.path.join(RESULTS_DIR, "4_ISEScan", "fna")
+TSV_DIR = os.path.join(RESULTS_DIR, "04_isescan", "fna")
 
-MAX_SPAN = 25000
-STRICT = False
-LIMIT = None
-args = sys.argv[1:]
-pos = [a for a in args if not a.startswith("--")]
-if pos:
-    MAX_SPAN = int(pos[0])
-STRICT = "--strict" in args
-if "--limit" in args:
-    LIMIT = int(args[args.index("--limit") + 1])
+def parse_args(argv):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("max_span_bp", nargs="?", type=int, default=25000,
+                        help="maximum cargo span in bp; 0 means no limit")
+    parser.add_argument("output_prefix", nargs="?",
+                        help="optional output prefix for test runs")
+    parser.add_argument("--strict", action="store_true",
+                        help="use adjacent-only IS pairs")
+    parser.add_argument("--limit", type=int,
+                        help="process only the first N ISEScan result files")
+    args = parser.parse_intermixed_args(argv)
+    if args.max_span_bp < 0:
+        parser.error("max_span_bp must be zero or positive")
+    if args.limit is not None and args.limit < 1:
+        parser.error("--limit must be positive")
+    return args
 
-PREFIX = "5strict_" if STRICT else "5_"
-if len(pos) > 1:  # optional output-prefix override (for test runs)
-    PREFIX = pos[1]
-OUT_CARGO = os.path.join(RESULTS_DIR, PREFIX + "Cargo.faa")
-OUT_BG = os.path.join(RESULTS_DIR, PREFIX + "Background.faa")
-OUT_TABLE = os.path.join(RESULTS_DIR, PREFIX + "Cargo_table.csv")
-OUT_SPAN = os.path.join(RESULTS_DIR, PREFIX + "Span_distribution.csv")
-OUT_SPANPDF = os.path.join(RESULTS_DIR, PREFIX + "Span_distribution.pdf")
-OUT_SUM = os.path.join(RESULTS_DIR, PREFIX + "Summary.txt")
+
+ARGS = parse_args(sys.argv[1:])
+MAX_SPAN = ARGS.max_span_bp
+STRICT = ARGS.strict
+LIMIT = ARGS.limit
+MODE = "strict" if STRICT else "relaxed"
+if ARGS.output_prefix:
+    PREFIX = ARGS.output_prefix
+    OUT_CARGO = os.path.join(RESULTS_DIR, PREFIX + "Cargo.faa")
+    OUT_BG = os.path.join(RESULTS_DIR, PREFIX + "Background.faa")
+    OUT_TABLE = os.path.join(RESULTS_DIR, PREFIX + "Cargo_table.csv.gz")
+    OUT_SPAN = os.path.join(RESULTS_DIR, PREFIX + "Span_distribution.csv")
+    OUT_SPANPDF = os.path.join(FIGURES_DIR, PREFIX + "Span_distribution.pdf")
+    OUT_SUM = os.path.join(RESULTS_DIR, PREFIX + "Summary.txt")
+else:
+    OUT_CARGO = os.path.join(RESULTS_DIR, f"07_cargo_{MODE}.faa")
+    OUT_BG = os.path.join(RESULTS_DIR, f"07_background_{MODE}.faa")
+    OUT_TABLE = os.path.join(RESULTS_DIR, f"07_cargo_membership_{MODE}.csv.gz")
+    OUT_SPAN = os.path.join(RESULTS_DIR, f"07_span_distribution_{MODE}.csv")
+    OUT_SPANPDF = os.path.join(FIGURES_DIR, f"07_span_distribution_{MODE}.pdf")
+    OUT_SUM = os.path.join(RESULTS_DIR, f"07_cargo_summary_{MODE}.txt")
 
 SPAN_DIST_MAX = 200000   # spans beyond this are counted, not listed
 
@@ -227,11 +231,12 @@ def main():
         if (k + 1) % 2000 == 0:
             print(f"{k + 1}/{len(tsv_files)} plasmids processed", flush=True)
 
+    os.makedirs(RESULTS_DIR, exist_ok=True)
     with open(OUT_CARGO, "w") as f:
         f.writelines(cargo_records)
     with open(OUT_BG, "w") as f:
         f.writelines(bg_records)
-    with open(OUT_TABLE, "w", newline="") as f:
+    with gzip.open(OUT_TABLE, "wt", newline="") as f:
         w = csv.writer(f)
         w.writerow(["accession", "md5", "locus_tag", "product", "is_family",
                     "left_flank_type", "right_flank_type", "span_bp", "arc",
@@ -254,8 +259,7 @@ def main():
         f"background_proteins: {len(bg_records)}",
         f"samefamily_pairs_in_span_distribution: {len(span_rows)} "
         f"(>{SPAN_DIST_MAX} bp not listed: {n_span_overcap})",
-        "outputs: " + ", ".join(os.path.basename(path) for path in
-                                (OUT_CARGO, OUT_BG, OUT_TABLE)),
+        f"outputs: {OUT_CARGO}, {OUT_BG}, {OUT_TABLE}",
     ])
     print(summary)
     with open(OUT_SUM, "w") as f:
@@ -279,6 +283,7 @@ def main():
         ax.set_ylabel("number of pairs")
         ax.legend(frameon=False, fontsize=8)
         fig.tight_layout()
+        os.makedirs(FIGURES_DIR, exist_ok=True)
         fig.savefig(OUT_SPANPDF)
         print(f"figure -> {OUT_SPANPDF}")
 

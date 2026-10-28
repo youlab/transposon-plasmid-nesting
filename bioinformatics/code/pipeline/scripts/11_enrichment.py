@@ -1,25 +1,8 @@
 #!/usr/bin/env python3
-"""
-11_enrichment.py
-Enrichment of functional categories in transposon cargo vs background
-(proteins on the same IS-carrying plasmids), with Fisher exact tests and
-Benjamini-Hochberg FDR across categories, plus the summary figure.
-
-Categories: CARD = antibiotic resistance, VFDB = virulence,
-            BacMet = metal/biocide resistance, TADB = toxin-antitoxin.
-
-Counts are copy-weighted: each unique protein's hit status maps back to all
-its copies via 6_{Cargo,Background}_unique_map.csv (protein md5 dedup was
-only a compute saver and has no statistical effect).
-
-Usage:  python scripts/11_enrichment.py [min_pident] [min_qcov] [tag]
-        default 90 60 (main); e.g. python scripts/11_enrichment.py 80 70 _p80q70
-
-Input:  2_Result/6_{Cargo,Background}_vs_{card,vfdb,bacmet,tadb}.tsv
-        2_Result/6_{Cargo,Background}_unique_map.csv
-Output: 2_Result/7_Enrichment_table{tag}.csv
-        2_Result/7_Enrichment_figure{tag}.pdf/.png
-        2_Result/7_Summary{tag}.txt
+"""Purpose: test cargo versus background functional-hit enrichment.
+Inputs: 09_{cargo,background}_relaxed_vs_*.tsv and 08_{cargo,background}_relaxed_unique_map.csv.
+Outputs: 11_enrichment_relaxed*.csv and summaries; figures go to results/figures/.
+Usage: python code/pipeline/scripts/11_enrichment.py [min_pident] [min_qcov] [tag]
 """
 import csv
 import os
@@ -31,9 +14,22 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
-RES = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+DATA_DIR = os.path.abspath(os.environ.get(
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
+RESULTS_DIR = os.path.abspath(os.environ.get(
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+RES = RESULTS_DIR
 MIN_PIDENT = float(sys.argv[1]) if len(sys.argv) > 1 else 90.0
 MIN_QCOV = float(sys.argv[2]) if len(sys.argv) > 2 else 60.0
 TAG = sys.argv[3] if len(sys.argv) > 3 else ""
@@ -46,7 +42,7 @@ CATS = {"card": "Antibiotic resistance\n(CARD)",
 
 def load_map(tag):
     m = {}
-    with open(os.path.join(RES, f"6_{tag}_unique_map.csv")) as f:
+    with open(input_path(f"08_{tag.lower()}_relaxed_unique_map.csv", generated=True)) as f:
         for row in csv.DictReader(f):
             m[row["md5"]] = int(row["n_copies"])
     return m
@@ -55,7 +51,7 @@ def load_map(tag):
 def load_hits(setname, cat, umap):
     """Weighted hit count for one set x category."""
     n = 0
-    with open(os.path.join(RES, f"6_{setname}_vs_{cat}.tsv"),
+    with open(input_path(f"09_{setname.lower()}_relaxed_vs_{cat}.tsv", generated=True),
               errors="replace") as f:
         for row in csv.reader(f, delimiter="\t"):
             if len(row) < 7:
@@ -99,7 +95,7 @@ def main():
     for r, q in zip(rows, qvals):
         r.append(f"{q:.3e}")
 
-    out_csv = os.path.join(RES, f"7_Enrichment_table{TAG}.csv")
+    out_csv = os.path.join(RES, f"11_enrichment_relaxed{TAG}.csv")
     with open(out_csv, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["category", "label", "cargo_hits", "cargo_total",
@@ -118,7 +114,7 @@ def main():
                      f"| OR={r[8]} | P={r[9]} | q={r[10]}")
     summary = "\n".join(lines)
     print(summary)
-    with open(os.path.join(RES, f"7_Summary{TAG}.txt"), "w") as f:
+    with open(os.path.join(RES, f"11_enrichment_relaxed{TAG}_summary.txt"), "w") as f:
         f.write(summary + "\n")
 
     # figure
@@ -146,9 +142,10 @@ def main():
     ax.legend(frameon=False, fontsize=9)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    out_pdf = os.path.join(RES, f"7_Enrichment_figure{TAG}.pdf")
+    os.makedirs(FIGURES_DIR, exist_ok=True)
+    out_pdf = os.path.join(FIGURES_DIR, f"11_enrichment_relaxed{TAG}.pdf")
     fig.savefig(out_pdf)
-    out_png = os.path.join(RES, f"7_Enrichment_figure{TAG}.png")
+    out_png = os.path.join(FIGURES_DIR, f"11_enrichment_relaxed{TAG}.png")
     fig.savefig(out_png, dpi=150)
     print(f"figure -> {out_pdf} (+ .png)")
 

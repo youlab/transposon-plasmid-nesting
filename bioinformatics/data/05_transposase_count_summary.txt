@@ -8,4 +8,4 @@ multicopy_samefamily_plasmids_raw: 19137 (unique sequences with >=2 same-family 
 multicopy_distinct_context_plasmids: 19044 (segmental duplication excluded; BLASTN flank=±200bp, pident>=90, qcov>=80)
 multicopy_detail_csv: 2_Result/4b_Multicopy_families.csv
 outlier_csv: 2_Result/4b_Outlier_plasmids.csv (top 20 high outliers)
-comparison_csv: 2_Result/4b_Transposase_count_comparison.csv
+comparison_csv: 05_transposase_count_comparison.csv

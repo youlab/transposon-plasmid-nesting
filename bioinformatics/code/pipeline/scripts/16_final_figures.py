@@ -1,16 +1,8 @@
 #!/usr/bin/env python3
-"""
-16_final_figures.py
-Publication-styled figures:
-  A) Step 05 scatter — log ticks only 10^0..10^3 (no minor ticks);
-     single color, no outlier highlighting; axis titles
-     "Transposase counts based on CDS annotation" /
-     "IS element counts based on ISEScan"; no title,
-     Spearman rho computed from the input table as in-plot text.
-  B) Step 11 enrichment bars — y axis 0-8% with % ticks; no q labels
-     (a sentence in text covers it); colors #D25D5D / #EEEEEE with black
-     edges; wider bar separation; legend "Cargos" / "Background".
-Reads existing result tables; overwrites the two figure files (+ .png).
+"""Purpose: create QC and relaxed-enrichment figures from existing tables.
+Inputs: 05_transposase_count_comparison.csv and 11_enrichment_relaxed.csv (from work/processed/ or data/).
+Outputs: PDF and PNG figures under results/figures/.
+Usage: python code/pipeline/scripts/16_final_figures.py
 """
 import csv
 import os
@@ -23,9 +15,22 @@ from matplotlib.ticker import LogLocator, NullLocator, FixedLocator, FuncFormatt
 from scipy.stats import spearmanr
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
-RES = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+DATA_DIR = os.path.abspath(os.environ.get(
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
+RESULTS_DIR = os.path.abspath(os.environ.get(
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+RES = RESULTS_DIR
 
 font_file = os.environ.get("NEE_FONT_FILE")
 if font_file:
@@ -34,7 +39,7 @@ if font_file:
     font_manager.fontManager.addfont(font_file)
     default_family = font_manager.FontProperties(fname=font_file).get_name()
 else:
-    default_family = os.environ.get("NEE_FONT_FAMILY", "DejaVu Sans")
+    default_family = os.environ.get("NEE_FONT_FAMILY", "Arial")
 plt.rcParams["font.family"] = default_family
 plt.rcParams["axes.unicode_minus"] = False
 
@@ -43,7 +48,7 @@ plt.rcParams["axes.unicode_minus"] = False
 
 def fig_05():
     xs, ys = [], []
-    with open(os.path.join(RES, "4b_Transposase_count_comparison.csv")) as f:
+    with open(input_path("05_transposase_count_comparison.csv", generated=True)) as f:
         for r in csv.reader(f):
             if r[0] == "accession" or r[2] == "":
                 continue
@@ -77,7 +82,8 @@ def fig_05():
             ha="left", va="top", fontsize=10)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    base = os.path.join(RES, "4b_Transposase_count_comparison")
+    os.makedirs(FIGURES_DIR, exist_ok=True)
+    base = os.path.join(FIGURES_DIR, "05_transposase_count_comparison")
     fig.savefig(base + ".pdf")
     fig.savefig(base + ".png", dpi=150)
     plt.close(fig)
@@ -88,7 +94,7 @@ def fig_05():
 
 def fig_11():
     rows = [r for r in csv.reader(
-        open(os.path.join(RES, "7_Enrichment_table.csv")))][1:]
+        open(input_path("11_enrichment_relaxed.csv", generated=True)))][1:]
     labels = [r[1].replace(" (", "\n(") for r in rows]
     cargo = [float(r[4]) for r in rows]
     bg = [float(r[7]) for r in rows]
@@ -110,7 +116,7 @@ def fig_11():
     ax.legend(frameon=False, fontsize=10)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    base = os.path.join(RES, "7_Enrichment_figure")
+    base = os.path.join(FIGURES_DIR, "11_enrichment_relaxed")
     fig.savefig(base + ".pdf")
     fig.savefig(base + ".png", dpi=150)
     plt.close(fig)

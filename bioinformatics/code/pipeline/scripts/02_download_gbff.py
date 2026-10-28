@@ -1,34 +1,8 @@
 #!/usr/bin/env python3
-"""
-02_download_gbff.py
-Batch-download GenBank files (with sequence + CDS translations) for the
-flagged plasmid accessions from NCBI, via Biopython Entrez efetch.
-
-One .gbff per accession in 1_Data/gbff/. Resumable: skips accessions whose
-file already exists. Uses chunks with retries and a polite delay.
-
-NCBI requires an email address for E-utilities (used only so NCBI can
-contact you about abnormal usage; it is not verified). An API key is
-optional but raises the rate limit from 3 to 10 req/s.
-
-Credentials are read only from the NCBI_EMAIL and NCBI_API_KEY environment
-variables. Never store a real API key in the repository.
-
-Usage:
-    python scripts/02_download_gbff.py [accession_list.txt]
-    # or override in the shell:  export NCBI_EMAIL=... NCBI_API_KEY=...
-
-Defaults (relative to the repository root):
-    Input:   2_Result/1_Hit_plasmids.txt
-    Output:  1_Data/gbff/<accession>.gbff
-    Summary: 2_Result/2_Download_assessions_summary.txt
-    Failed:  2_Result/2_Failed_assessions.txt
-             (re-run this script with that file as argument to retry)
-
-Notes:
-    - rettype=gbwithparts gives full sequence; step 3 derives .fna for
-      ISEScan from the same file, so only ONE download per accession.
-    - ~26k accessions -> a few hours with an API key. Run under nohup/tmux.
+"""Purpose: download GenBank records for transposase-positive plasmids.
+Input: work/processed/01_transposase_positive_accessions.txt (falls back to data/).
+Output: work/raw/gbff/*.gbff and work/processed/02_download_sessions_summary.txt.
+Usage: set NCBI_EMAIL, then run python code/pipeline/scripts/02_download_gbff.py [accession_list.txt]
 """
 import datetime
 import os
@@ -43,14 +17,24 @@ SLEEP_WITH_KEY = 0.12  # ~10 req/s with API key
 RETRIES = 5
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 DATA_DIR = os.path.abspath(os.environ.get(
-    "NEE_DATA_DIR", os.path.join(ROOT, "1_Data")))
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
 RESULTS_DIR = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
 OUTDIR = os.path.join(DATA_DIR, "gbff")
-SUMMARY_TXT = os.path.join(RESULTS_DIR, "2_Download_assessions_summary.txt")
-FAILED_TXT = os.path.join(RESULTS_DIR, "2_Failed_assessions.txt")
+SUMMARY_TXT = os.path.join(RESULTS_DIR, "02_download_sessions_summary.txt")
+FAILED_TXT = os.path.join(RESULTS_DIR, "02_failed_accessions.txt")
 
 Entrez.email = os.environ.get("NCBI_EMAIL", "")
 Entrez.api_key = os.environ.get("NCBI_API_KEY") or None
@@ -99,8 +83,7 @@ def main():
                  "(NCBI requires an email for E-utilities), e.g.\n"
                  "  export NCBI_EMAIL=you@duke.edu")
 
-    acc_file = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-        RESULTS_DIR, "1_Hit_plasmids.txt")
+    acc_file = sys.argv[1] if len(sys.argv) > 1 else input_path("01_transposase_positive_accessions.txt", generated=True)
     os.makedirs(OUTDIR, exist_ok=True)
     accs = [l.strip() for l in open(acc_file) if l.strip()]
     todo = [a for a in accs

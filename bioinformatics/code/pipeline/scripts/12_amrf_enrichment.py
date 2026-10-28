@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
-"""
-Calculate copy-weighted ARG enrichment from AMRFinderPlus output.
-
-Inputs:
-    2_Result/6_AMRF_Cargo.tsv
-    2_Result/6_AMRF_Background.tsv
-    2_Result/6_Cargo_unique_map.csv
-    2_Result/6_Background_unique_map.csv
-    2_Result/5_Cargo.faa
-
-Outputs:
-    2_Result/6_AMRF_enrichment.csv
-    2_Result/6_AMRF_weighted_summary.txt
-
-Usage:
-    python scripts/12_amrf_enrichment.py
+"""Purpose: calculate copy-weighted AMRFinder ARG enrichment.
+Inputs: 09_amrfinder_{cargo,background}.tsv, 08_*_relaxed_unique_map.csv, and 07_cargo_relaxed.faa.
+Outputs: 12_amrfinder_enrichment.csv and 12_amrfinder_enrichment_summary.txt.
+Usage: python code/pipeline/scripts/12_amrf_enrichment.py
 """
 import csv
 import hashlib
@@ -24,9 +12,22 @@ from scipy.stats import fisher_exact
 
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
-RES = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+DATA_DIR = os.path.abspath(os.environ.get(
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
+RESULTS_DIR = os.path.abspath(os.environ.get(
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+RES = RESULTS_DIR
 
 
 def load_copy_map(path):
@@ -53,7 +54,7 @@ def cargo_plasmid_count(hit_queries):
     accessions = set()
     accession = None
     sequence = []
-    with open(os.path.join(RES, "5_Cargo.faa")) as f:
+    with open(input_path("07_cargo_relaxed.faa", generated=True)) as f:
         for line in f:
             if line.startswith(">"):
                 if accession is not None:
@@ -73,11 +74,11 @@ def cargo_plasmid_count(hit_queries):
 
 def main():
     maps = {
-        name: load_copy_map(os.path.join(RES, f"6_{name}_unique_map.csv"))
+        name: load_copy_map(input_path(f"08_{name.lower()}_relaxed_unique_map.csv", generated=True))
         for name in ("Cargo", "Background")
     }
     hits = {
-        name: load_amrf_queries(os.path.join(RES, f"6_AMRF_{name}.tsv"))
+        name: load_amrf_queries(input_path(f"09_amrfinder_{name.lower()}.tsv", generated=True))
         for name in ("Cargo", "Background")
     }
     totals = {name: sum(maps[name].values()) for name in maps}
@@ -92,7 +93,7 @@ def main():
     ])
     n_plasmids = cargo_plasmid_count(hits["Cargo"])
 
-    out_csv = os.path.join(RES, "6_AMRF_enrichment.csv")
+    out_csv = os.path.join(RES, "12_amrfinder_enrichment.csv")
     with open(out_csv, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -116,7 +117,7 @@ def main():
         f"fisher_pvalue: {pvalue:.3e}",
         f"cargo_plasmids_with_hit: {n_plasmids:,}",
     ])
-    with open(os.path.join(RES, "6_AMRF_weighted_summary.txt"), "w") as f:
+    with open(os.path.join(RES, "12_amrfinder_enrichment_summary.txt"), "w") as f:
         f.write(summary + "\n")
     print(summary)
 

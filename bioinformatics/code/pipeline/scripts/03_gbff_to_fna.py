@@ -1,23 +1,8 @@
 #!/usr/bin/env python3
-"""
-03_gbff_to_fna.py
-Convert downloaded .gbff files to .fna for ISEScan, and deduplicate by exact
-sequence md5 (identical plasmid sequences sampled from many genomes are kept
-once; a mapping table records all accessions sharing a sequence).
-
-Defaults (relative to the repository root):
-    Input:  1_Data/gbff/*.gbff
-    Output: 1_Data/fna/<md5>.fna         (header: >representative_acc|<md5>)
-            2_Result/3_Seqhash_map.csv  (md5, representative_acc, n_accessions, all_accessions)
-            2_Result/3_Dedup_summary.txt
-
-Usage:  python scripts/03_gbff_to_fna.py
-
-Notes:
-    - fna files are written on first sight of each unique sequence (sequences
-      are not held in memory).
-    - gbff files that fail to parse, or have empty/N-only sequence, are
-      skipped and listed in the summary.
+"""Purpose: convert GBFF records to FNA and deduplicate exact sequences.
+Input: work/raw/gbff/*.gbff.
+Output: work/processed/fna/*.fna, 03_plasmid_sequence_hashes.csv, and 03_deduplication_summary.txt.
+Usage: python code/pipeline/scripts/03_gbff_to_fna.py
 """
 import datetime
 import glob
@@ -27,15 +12,25 @@ import os
 from Bio import SeqIO
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 DATA_DIR = os.path.abspath(os.environ.get(
-    "NEE_DATA_DIR", os.path.join(ROOT, "1_Data")))
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
 RESULTS_DIR = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
 GBFF_DIR = os.path.join(DATA_DIR, "gbff")
-FNA_DIR = os.path.join(DATA_DIR, "fna")
-MAP_CSV = os.path.join(RESULTS_DIR, "3_Seqhash_map.csv")
-SUMMARY_TXT = os.path.join(RESULTS_DIR, "3_Dedup_summary.txt")
+FNA_DIR = os.path.join(RESULTS_DIR, "fna")
+MAP_CSV = os.path.join(RESULTS_DIR, "03_plasmid_sequence_hashes.csv")
+SUMMARY_TXT = os.path.join(RESULTS_DIR, "03_deduplication_summary.txt")
 
 
 def main():

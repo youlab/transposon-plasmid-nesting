@@ -1,28 +1,12 @@
 #!/usr/bin/env python3
-"""
-10_function_inventory.py
-Functional inventory of transposon cargo. Enrichment relative to the
-within-plasmid background is calculated in Step 11.
-
-Per category (CARD=antibiotic resistance, VFDB=virulence, BacMet=metal/
-biocide resistance, TADB=toxin-antitoxin):
-  - which cargo proteins hit (DIAMOND, pident>=P and qcov>=Q),
-  - weighted back to full copy counts via 6_Cargo_unique_map.csv,
-  - joined to 5_Cargo_table.csv for plasmid / IS-family context,
-  - top genes by copy count, plasmids carrying >=1 hit,
-  - cargo annotated fraction (any DB) and hypothetical fraction.
-
-Usage:  python scripts/10_function_inventory.py [min_pident] [min_qcov] [tag]
-        default 90 60, no tag (main outputs); tag renames outputs to 6a<tag>_*
-
-Input:  2_Result/6_Cargo_vs_{card,vfdb,bacmet,tadb}.tsv
-        2_Result/6_Cargo_unique_map.csv
-        2_Result/5_Cargo_table.csv
-Output: 2_Result/6a_Cargo_function_inventory.csv
-        2_Result/6a_Cargo_top_genes.csv
-        2_Result/6a_Summary.txt
+"""Purpose: summarize functional hits among cargo proteins by category.
+Inputs: 09_cargo_relaxed_vs_*.tsv, 08_cargo_relaxed_unique_map.csv,
+        07_cargo_membership_relaxed.csv.gz, and 07_cargo_relaxed.faa.
+Outputs: 10_cargo_function_inventory.csv, 10_cargo_top_genes.csv, and summary.
+Usage: python code/pipeline/scripts/10_function_inventory.py [min_pident] [min_qcov] [tag]
 """
 import csv
+import gzip
 import hashlib
 import os
 import re
@@ -30,13 +14,26 @@ import sys
 from collections import Counter, defaultdict
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
-RES = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
+DATA_DIR = os.path.abspath(os.environ.get(
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
+RESULTS_DIR = os.path.abspath(os.environ.get(
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+RES = RESULTS_DIR
 MIN_PIDENT = float(sys.argv[1]) if len(sys.argv) > 1 else 90.0
 MIN_QCOV = float(sys.argv[2]) if len(sys.argv) > 2 else 60.0
 TAG = sys.argv[3] if len(sys.argv) > 3 else ""
-OUT_PFX = f"6a{TAG}_"
+OUT_PFX = f"10_cargo{TAG}_"
 
 CATS = {"card": "Antibiotic resistance (CARD)",
         "vfdb": "Virulence (VFDB)",
@@ -72,7 +69,7 @@ def gene_of(cat, stitle):
 def load_hits(cat):
     """md5 -> (pident, qcov, gene, stitle) for hits passing thresholds."""
     hits = {}
-    with open(os.path.join(RES, f"6_Cargo_vs_{cat}.tsv"),
+    with open(input_path(f"09_cargo_relaxed_vs_{cat}.tsv", generated=True),
               errors="replace") as f:
         for row in csv.reader(f, delimiter="\t"):
             if len(row) < 7:
@@ -88,7 +85,7 @@ def load_hits(cat):
 def main():
     # md5 -> [n_copies, representative_header]
     umap = {}
-    with open(os.path.join(RES, "6_Cargo_unique_map.csv")) as f:
+    with open(input_path("08_cargo_relaxed_unique_map.csv", generated=True)) as f:
         for row in csv.DictReader(f):
             umap[row["md5"]] = [int(row["n_copies"]),
                                 row["representative_header"]]
@@ -96,7 +93,7 @@ def main():
     # (acc, locus) -> cargo-table row (is_family, flanks, span, product)
     cargo_ctx = {}
     n_cargo_cds = n_hypo = 0
-    with open(os.path.join(RES, "5_Cargo_table.csv")) as f:
+    with gzip.open(input_path("07_cargo_membership_relaxed.csv.gz", generated=True), "rt") as f:
         for r in csv.reader(f):
             if r[0] == "accession":
                 continue
@@ -112,14 +109,14 @@ def main():
     plasmids_of = defaultdict(set)   # cat -> {acc}
     weighted = Counter()             # cat -> copies
     annotated_md5 = set()
-    with open(os.path.join(RES, "5_Cargo.faa")) as f:
+    with open(input_path("07_cargo_relaxed.faa", generated=True)) as f:
         for line in f:
             if line.startswith(">"):
                 acc = line[1:].split("|")[0]
                 seq_lines = []
             else:
                 seq_lines.append(line.strip())
-                # protein records are single-line sequences in 5_Cargo.faa
+                # protein records are single-line sequences in 07_cargo_relaxed.faa
                 h = hashlib.md5("".join(seq_lines).encode()).hexdigest()
                 seq_lines = []
                 for cat, hmap in hits.items():
@@ -143,7 +140,7 @@ def main():
                              racc, rlocus, rprod,
                              ctx[4], ctx[5], ctx[6], stitle[:80]])
 
-    with open(os.path.join(RES, OUT_PFX + "Cargo_function_inventory.csv"),
+    with open(os.path.join(RES, OUT_PFX + "function_inventory.csv"),
               "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["md5", "category", "gene", "pident", "qcov", "n_copies",
@@ -161,7 +158,7 @@ def main():
         for gene, n in gene_copies[cat].most_common(25):
             top_rows.append([cat, gene, n,
                              len(plasmids_of[cat]), CATS[cat]])
-    with open(os.path.join(RES, OUT_PFX + "Cargo_top_genes.csv"), "w",
+    with open(os.path.join(RES, OUT_PFX + "top_genes.csv"), "w",
               newline="") as f:
         w = csv.writer(f)
         w.writerow(["category", "gene", "weighted_copies",
@@ -170,7 +167,7 @@ def main():
 
     n_cargo_proteins = sum(v[0] for v in umap.values())
     lines = [
-        "# Step 6a: cargo functional inventory "
+        "# Step 10: cargo functional inventory "
         f"(pident>={MIN_PIDENT:g}, qcov>={MIN_QCOV:g})",
         f"cargo_proteins_total: {n_cargo_proteins} "
         f"(unique: {len(umap)}; cargo CDS: {n_cargo_cds})",
@@ -193,7 +190,7 @@ def main():
             f"{g}({n})" for g, n in gene_copies[cat].most_common(10)))
         lines.append("")
     summary = "\n".join(lines)
-    with open(os.path.join(RES, OUT_PFX + "Summary.txt"), "w") as f:
+    with open(os.path.join(RES, OUT_PFX + "function_summary.txt"), "w") as f:
         f.write(summary + "\n")
     print(summary)
 

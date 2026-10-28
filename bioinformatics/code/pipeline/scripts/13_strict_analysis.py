@@ -1,26 +1,8 @@
 #!/usr/bin/env python3
-"""
-13_strict_analysis.py
-Strict-mode (adjacent-only pairing) sensitivity pipeline: protein dedup ->
-DIAMOND vs 4 DBs -> enrichment, all on the strict cargo/background sets
-(5strict_*.faa from historical step 5). Mirrors historical steps 6-7.
-
-The enrichment table reports BOTH countings side by side (main analysis is
-weighted = CDS-level; unweighted is shown only as a sensitivity):
-  - weighted   = CDS-level (each cargo/background CDS counts once;
-                 identical proteins on different plasmids count each time)
-  - unweighted = unique-protein level (identical protein sequences count
-                 once regardless of how many plasmids carry them)
-
-Usage:  python scripts/13_strict_analysis.py [threads] [min_pident] [min_qcov]
-        defaults: 8 90 60
-
-Input:  2_Result/5strict_Cargo.faa, 2_Result/5strict_Background.faa
-        1_Data/database/{card,vfdb,bacmet,tadb}.dmnd
-Output: 2_Result/8_Cargo_unique.faa, 8_Cargo_unique_map.csv,
-        2_Result/8_Background_unique.faa, 8_Background_unique_map.csv,
-        2_Result/8_{Cargo,Background}_vs_{card,vfdb,bacmet,tadb}.tsv,
-        2_Result/8_Enrichment_table.csv, 2_Result/8_Summary.txt
+"""Purpose: run strict cargo/background deduplication and enrichment sensitivity analyses.
+Inputs: 07_{cargo,background}_strict.faa and database files in NEE_DATABASE_DIR.
+Outputs: 13_{cargo,background}_strict_unique.faa/maps, hit tables, enrichment table, and summary.
+Usage: python code/pipeline/scripts/13_strict_analysis.py [threads] [min_pident] [min_qcov]
 """
 import csv
 import hashlib
@@ -31,11 +13,22 @@ import sys
 from scipy.stats import fisher_exact
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 DATA_DIR = os.path.abspath(os.environ.get(
-    "NEE_DATA_DIR", os.path.join(ROOT, "1_Data")))
-RES = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
+RESULTS_DIR = os.path.abspath(os.environ.get(
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+RES = RESULTS_DIR
 DBDIR = os.path.abspath(os.environ.get(
     "NEE_DATABASE_DIR", os.path.join(DATA_DIR, "database")))
 DIAMOND = os.environ.get("DIAMOND_BIN", "diamond")
@@ -99,7 +92,7 @@ def dedup(src, out_faa, out_map):
 
 def run_diamond(setname):
     for cat in CATS:
-        o = os.path.join(RES, f"8_{setname}_vs_{cat}.tsv")
+        o = os.path.join(RES, f"13_{setname.lower()}_strict_vs_{cat}.tsv")
         if os.path.exists(o) and os.path.getsize(o) > 0:
             print(f"  skip (exists): {o}", flush=True)
             continue
@@ -107,7 +100,7 @@ def run_diamond(setname):
         subprocess.run(
             [DIAMOND, "blastp", "--very-sensitive", "--threads",
              str(THREADS),
-             "-q", os.path.join(RES, f"8_{setname}_unique.faa"),
+             "-q", os.path.join(RES, f"13_{setname.lower()}_strict_unique.faa"),
              "-d", os.path.join(DBDIR, cat),
              "-o", o,
              "--outfmt", "6", "qseqid", "sseqid", "pident", "length",
@@ -121,7 +114,7 @@ def run_diamond(setname):
 def load_counts(setname, cat, umap):
     """Return (weighted, unweighted) hit counts passing thresholds."""
     w = u = 0
-    with open(os.path.join(RES, f"8_{setname}_vs_{cat}.tsv"),
+    with open(os.path.join(RES, f"13_{setname.lower()}_strict_vs_{cat}.tsv"),
               errors="replace") as f:
         for row in csv.reader(f, delimiter="\t"):
             if len(row) < 7:
@@ -147,12 +140,12 @@ def bh_fdr(pvals):
 def main():
     print("[1/3] protein dedup (strict sets)", flush=True)
     maps = {}
-    for setname, src in (("Cargo", "5strict_Cargo.faa"),
-                         ("Background", "5strict_Background.faa")):
+    for setname, src in (("Cargo", "07_cargo_strict.faa"),
+                         ("Background", "07_background_strict.faa")):
         maps[setname] = dedup(
-            os.path.join(RES, src),
-            os.path.join(RES, f"8_{setname}_unique.faa"),
-            os.path.join(RES, f"8_{setname}_unique_map.csv"))
+            input_path(src, generated=True),
+            os.path.join(RES, f"13_{setname.lower()}_strict_unique.faa"),
+            os.path.join(RES, f"13_{setname.lower()}_strict_unique_map.csv"))
 
     print("[2/3] diamond", flush=True)
     for s in ("Cargo", "Background"):
@@ -176,7 +169,7 @@ def main():
     for r, q in zip(rows, q_w):
         r.append(f"{q:.3e}")
 
-    out_csv = os.path.join(RES, "8_Enrichment_table.csv")
+    out_csv = os.path.join(RES, "13_enrichment_strict.csv")
     with open(out_csv, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["category", "label", "cargo_hits", "cargo_total",
@@ -185,7 +178,7 @@ def main():
         w.writerows(rows)
 
     lines = [
-        f"# Step 8: STRICT-mode enrichment "
+        f"# Step 13: STRICT-mode enrichment "
         f"(pident>={MIN_PIDENT:g}, qcov>={MIN_QCOV:g}, weighted = CDS-level)",
         f"cargo_total: {tot_w['Cargo']}, background_total: "
         f"{tot_w['Background']} (copy-weighted)",
@@ -195,7 +188,7 @@ def main():
                      f"| OR={r[8]} | P={r[9]} | q={r[10]}")
     summary = "\n".join(lines)
     print(summary)
-    with open(os.path.join(RES, "8_Summary.txt"), "w") as f:
+    with open(os.path.join(RES, "13_enrichment_strict_summary.txt"), "w") as f:
         f.write(summary + "\n")
 
     # figure (same style as step 7)
@@ -226,9 +219,10 @@ def main():
     ax.legend(frameon=False, fontsize=9)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    fig.savefig(os.path.join(RES, "8_Enrichment_figure.pdf"))
-    fig.savefig(os.path.join(RES, "8_Enrichment_figure.png"), dpi=150)
-    print(f"figure -> {os.path.join(RES, '8_Enrichment_figure.pdf')} (+ .png)")
+    os.makedirs(FIGURES_DIR, exist_ok=True)
+    fig.savefig(os.path.join(FIGURES_DIR, "13_enrichment_strict.pdf"))
+    fig.savefig(os.path.join(FIGURES_DIR, "13_enrichment_strict.png"), dpi=150)
+    print(f"figure -> {os.path.join(FIGURES_DIR, '13_enrichment_strict.pdf')} (+ .png)")
 
 
 if __name__ == "__main__":

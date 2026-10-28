@@ -1,27 +1,8 @@
 #!/usr/bin/env python3
-"""
-06_discordant_breakdown.py  (count-discordance QC)
-For the plasmids where Rohan's annotation screen found >=1 transposase but
-ISEScan found ZERO IS elements (the annotation-positive / sequence-negative
-discordant class), extract the regex-matched CDS product strings from their
-gbff and classify them:
-  - tn3_family_unit_transposon   (outside ISEScan's IS-only scope)
-  - other_transposase_or_IS      (plausible real TE annotation; ISEScan miss
-                                  or degraded element)
-  - unclear_likely_false_positive (regex fired on an unrelated product)
-
-Also validates our reproduction of Rohan's regex: per-plasmid matched-CDS
-count vs his transposase_count (same gbff products, same regex).
-
-Defaults (relative to the repository root):
-    Input:  2_Result/4_ISEScan/fna/*.fna.tsv
-            2_Result/3_Seqhash_map.csv
-            1_Data/transposase-counts.csv
-            1_Data/gbff/<acc>.gbff
-    Output: 2_Result/4c_Discordant_cds.csv
-            2_Result/4c_Summary.txt
-
-Usage:  python scripts/06_discordant_breakdown.py
+"""Purpose: classify annotation-positive plasmids with no ISEScan calls.
+Inputs: work/processed/04_isescan/fna/*.tsv, 03_plasmid_sequence_hashes.csv, 01_transposase_counts.csv, work/raw/gbff/*.gbff.
+Outputs: work/processed/06_discordant_cds.csv and 06_discordant_summary.txt.
+Usage: python code/pipeline/scripts/06_discordant_breakdown.py
 """
 import csv
 import glob
@@ -32,17 +13,27 @@ from collections import Counter
 from Bio import SeqIO
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 DATA_DIR = os.path.abspath(os.environ.get(
-    "NEE_DATA_DIR", os.path.join(ROOT, "1_Data")))
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
 RESULTS_DIR = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
-TSV_DIR = os.path.join(RESULTS_DIR, "4_ISEScan", "fna")
-MAP_CSV = os.path.join(RESULTS_DIR, "3_Seqhash_map.csv")
-ROHAN_CSV = os.path.join(DATA_DIR, "transposase-counts.csv")
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+TSV_DIR = os.path.join(RESULTS_DIR, "04_isescan", "fna")
+MAP_CSV = input_path("03_plasmid_sequence_hashes.csv", generated=True)
+ROHAN_CSV = input_path("01_transposase_counts.csv")
 GBFF_DIR = os.path.join(DATA_DIR, "gbff")
-OUT_CDS = os.path.join(RESULTS_DIR, "4c_Discordant_cds.csv")
-OUT_SUM = os.path.join(RESULTS_DIR, "4c_Summary.txt")
+OUT_CDS = os.path.join(RESULTS_DIR, "06_discordant_cds.csv")
+OUT_SUM = os.path.join(RESULTS_DIR, "06_discordant_summary.txt")
 
 # Rohan's screen regex (exact string from his script, cf. archive §8)
 ROHAN_RE = re.compile(

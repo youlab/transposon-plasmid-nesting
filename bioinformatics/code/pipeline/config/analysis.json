@@ -1,0 +1,57 @@
+{
+  "variant": "WithTA",
+  "original_categories": [
+    "card",
+    "vfdb",
+    "bacmet",
+    "tadb"
+  ],
+  "backbone_categories": [
+    "card",
+    "vfdb",
+    "bacmet",
+    "tadb"
+  ],
+  "membership_file": "data/19_cds_annotation_membership.csv.gz",
+  "before_counts": "data/20_cds_counts_before_filtering.csv",
+  "after_counts": "data/20_cds_counts_after_filtering.csv",
+  "mode_counts": "data/20_backbone_filter_counts.csv",
+  "after_statistics": "data/21_backbone_enrichment.csv",
+  "output_directory": "results",
+  "font_family": "Arial",
+  "excluded_plasann_categories": [
+    "Conjugation",
+    "Plasmid Maintenance, Replication and Regulation"
+  ],
+  "plasann": {
+    "software_version": "1.1.6",
+    "commit": "35199e00d90462b9cf84e9f924ef098edd5da122",
+    "reference_snapshot_date": "2026-10-19",
+    "reference_cds_count": 213884,
+    "reference_accession_count": 11942,
+    "reference_sha256": "72b005cf392f6b22f969a1218a2f71c8ad4dfb399efd1327ce9d8c1a695ddd57",
+    "official_database_url": "https://plasann-production.up.railway.app/api/download/Database.csv",
+    "public_archive_url": "https://zenodo.org/records/19446428",
+    "identity_min_percent": 80,
+    "query_coverage_min_percent": 90,
+    "subject_coverage_min_percent": 90,
+    "fallback_enabled": false,
+    "evalue": 1e-05,
+    "max_targets": 10
+  },
+  "functional_hits": {
+    "identity_min_percent": 90,
+    "query_coverage_min_percent": 60,
+    "databases": [
+      "card",
+      "vfdb",
+      "bacmet",
+      "tadb"
+    ]
+  },
+  "statistical_test": "two-sided pooled-CDS Fisher; BH separately within cargo mode and gene set",
+  "remove_ta_positive_cds": false,
+  "dependence_correction": false,
+  "membership_sha256": "23bb7323df1dc911e18792dabdda1a0671b9fbbef0cd833a2973ffc0f3332f57",
+  "cargo_max_span_bp": 25000
+}

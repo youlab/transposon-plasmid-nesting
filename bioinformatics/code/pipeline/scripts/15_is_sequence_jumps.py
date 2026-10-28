@@ -1,32 +1,8 @@
 #!/usr/bin/env python3
-"""
-15_is_sequence_jumps.py
-Sequence-level analysis of identical IS copies at distinct insertion contexts.
-
-Analysis logic:
-  1. Candidate filter: plasmids with >=2 copies of the same IS family
-     (family label is ONLY a filter; no identity claim).
-  2. Element identity: two copies are "the same transposon" iff their DNA
-     sequences are EXACTLY identical, up to orientation (md5 of the copy
-     sequence or its reverse complement). No alignment or identity threshold
-     is used, and no filter is applied to the ISEScan type field.
-  3. Insertion-site comparison: for each identical pair, the 10 bp OUTSIDE
-     each end of the element (in the element's own orientation, so inverted
-     copies are handled: left-left + right-right after rev-comp where
-     needed). Same site = both 10 bp flanks identical (this also excludes
-     tandem amplification arrays, whose junctions are identical); different
-     site = anything else. Caveat: post-insertion SNP drift in the 10 bp
-     counts as "different" (anti-conservative direction, noted in output).
-  4. A plasmid is a "multiple-jump plasmid" if any identical-sequence group
-     has >=2 distinct contexts. Funnel counts reported at each stage.
-  5. Representative example records include accession, coordinates,
-     orientation, both 10 bp flanks per copy).
-
-Usage:  python scripts/15_is_sequence_jumps.py
-Input:  2_Result/4_ISEScan/fna/*.fna.tsv, 1_Data/fna/*.fna,
-        2_Result/3_Seqhash_map.csv
-Output: 2_Result/10_Summary.txt, 2_Result/10_Per_plasmid.csv,
-        2_Result/10_Jump_examples.txt
+"""Purpose: assess identical IS copies at distinct insertion contexts.
+Inputs: work/processed/04_isescan/fna/*.tsv, work/processed/fna/*.fna, 03_plasmid_sequence_hashes.csv.
+Outputs: 15_is_insertion_contexts.csv, 15_is_insertion_summary.txt, and 15_is_insertion_examples.txt.
+Usage: python code/pipeline/scripts/15_is_sequence_jumps.py
 """
 import csv
 import hashlib
@@ -34,17 +10,28 @@ import os
 from collections import Counter, defaultdict
 
 ROOT = os.path.abspath(os.environ.get(
-    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(__file__))))
+    "NEE_PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))))
 DATA_DIR = os.path.abspath(os.environ.get(
-    "NEE_DATA_DIR", os.path.join(ROOT, "1_Data")))
-RES = os.path.abspath(os.environ.get(
-    "NEE_RESULTS_DIR", os.path.join(ROOT, "2_Result")))
-FNA_DIR = os.path.join(DATA_DIR, "fna")
-TSV_DIR = os.path.join(RES, "4_ISEScan", "fna")
-MAP_CSV = os.path.join(RES, "3_Seqhash_map.csv")
-OUT_SUM = os.path.join(RES, "10_Summary.txt")
-OUT_PER = os.path.join(RES, "10_Per_plasmid.csv")
-OUT_EX = os.path.join(RES, "10_Jump_examples.txt")
+    "NEE_DATA_DIR", os.path.join(ROOT, "work", "raw")))
+RESULTS_DIR = os.path.abspath(os.environ.get(
+    "NEE_RESULTS_DIR", os.path.join(ROOT, "work", "processed")))
+FIGURES_DIR = os.path.join(ROOT, "results", "figures")
+STATIC_DIR = os.path.join(ROOT, "data")
+
+
+def input_path(name, generated=False):
+    """Prefer current work products, then raw inputs or bundled static tables."""
+    directories = (RESULTS_DIR, DATA_DIR, STATIC_DIR) if generated else (DATA_DIR, STATIC_DIR, RESULTS_DIR)
+    candidates = [os.path.join(directory, name) for directory in directories]
+    return next((path for path in candidates if os.path.exists(path)), candidates[0])
+
+RES = RESULTS_DIR
+FNA_DIR = os.path.join(RESULTS_DIR, "fna")
+TSV_DIR = os.path.join(RES, "04_isescan", "fna")
+MAP_CSV = input_path("03_plasmid_sequence_hashes.csv", generated=True)
+OUT_SUM = os.path.join(RES, "15_is_insertion_summary.txt")
+OUT_PER = os.path.join(RES, "15_is_insertion_contexts.csv")
+OUT_EX = os.path.join(RES, "15_is_insertion_examples.txt")
 
 FLANK = 10
 MAX_EXAMPLES = 10
@@ -165,6 +152,7 @@ def main():
         if (k + 1) % 4000 == 0:
             print(f"{k + 1}/{len(tsv_files)} plasmids scanned", flush=True)
 
+    os.makedirs(RES, exist_ok=True)
     with open(OUT_PER, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["accession", "md5", "n_families_ge2", "has_identical_pair",

@@ -1,0 +1,5 @@
+# Corrected strict CDS membership counts
+Source: 19_cds_annotation_membership.csv.gz
+CDS instances after existing IS-overlap and cargo/background eligibility rules; before PlasAnn backbone exclusion.
+background: raw=3082243; excluded_backbone=348798; retained=2733445
+cargo: raw=240858; excluded_backbone=19829; retained=221029
